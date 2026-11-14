@@ -6,6 +6,7 @@ import { ActivitiesSection } from '../../features/activities/ActivitiesSection';
 import { GuestsSection } from '../../features/guests/GuestsSection';
 import { EventTabs, NeedsYouStrip, useEventTab } from '../../features/events/EventTabs';
 import { EventHistoryTab } from '../../features/history/EventHistorySection';
+import { OrganiserPhotos } from '../../features/photos/OrganiserPhotos';
 import { OrganisersSection } from '../../features/organisers/OrganisersSection';
 import { ProposalsSection } from '../../features/proposals/ProposalsSection';
 import { PublicationCard } from '../../features/publication/PublicationCard';
@@ -153,6 +154,7 @@ export function EventPage() {
         {tab === 'guests' && <GuestsSection event={event} />}
         {tab === 'organisers' && <OrganisersSection event={event} />}
         {tab === 'proposals' && <ProposalsSection event={event} />}
+        {tab === 'photos' && <OrganiserPhotos event={event} />}
         {tab === 'history' && <EventHistoryTab event={event} />}
       </div>
     </div>

@@ -34,6 +34,7 @@ export type EventAction =
   | 'suggestions.respond'
   | 'photos.upload'
   | 'photos.moderate'
+  | 'gallery.settings' // turn guest photo uploads on/off (FR-168)
   | 'audit.view';
 
 /** How a detail edit is applied in each status. */
@@ -82,6 +83,7 @@ const RULES: Record<EventAction, Rule> = {
   'suggestions.respond': { roles: ADMINS, statuses: LIVE },
   'photos.upload': { roles: ADMINS, statuses: NOT_CANCELLED },
   'photos.moderate': { roles: ADMINS, statuses: LIVE },
+  'gallery.settings': { roles: ADMINS, statuses: NOT_CANCELLED },
   'audit.view': { roles: ADMINS, statuses: ALL },
 };
 

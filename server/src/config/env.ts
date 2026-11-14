@@ -34,6 +34,8 @@ const envSchema = z.object({
   EMAIL_RATE_PER_MINUTE: z.coerce.number().int().min(1).max(1000).default(20),
   ANTHROPIC_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
   CLIENT_DIST_DIR: z.preprocess(emptyToUndefined, z.string().optional()),
+  // Uploaded photos (never served directly — always through an authorised route).
+  STORAGE_DIR: z.preprocess(emptyToUndefined, z.string().default('storage')),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -49,6 +51,7 @@ export interface AppConfig {
   rateLimitEnabled: boolean;
   emailRatePerMinute: number;
   clientDistDir?: string;
+  storageDir: string;
   session: {
     cookieName: string;
     secureCookie: boolean;
@@ -94,6 +97,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
     rateLimitEnabled: e.RATE_LIMIT_ENABLED,
     emailRatePerMinute: e.EMAIL_RATE_PER_MINUTE,
     clientDistDir: e.CLIENT_DIST_DIR,
+    storageDir: e.STORAGE_DIR,
     session: {
       // The __Host- prefix forces Secure, Path=/ and no Domain — only usable over HTTPS.
       cookieName: secureCookie ? '__Host-gatherly_sid' : 'gatherly_sid',

@@ -48,7 +48,7 @@ const FIELD_LABEL: Record<string, string> = {
 const CATEGORY_ACTIONS: Record<EventHistoryEntry['category'], string[]> = {
   event: ['event.created', 'event.updated', 'event.unpublished', 'event.cancelled', 'event.completed'],
   activity: ['activity.'],
-  guests: ['guest.', 'guests.', 'invitation', 'rsvp.'],
+  guests: ['guest.', 'guests.', 'invitation', 'rsvp.', 'photo', 'gallery.'],
   organisers: ['coadmin.'],
   approval: ['publication.', 'event.published'],
   proposal: ['proposal.'],
@@ -165,6 +165,20 @@ export class EventHistoryService {
         const status = str(after?.['status']);
         return e('guests', `replied “${status === 'CONFIRMED' ? 'Going' : 'Can’t make it'}” to ${str(meta?.['activityName']) || 'an activity'}`);
       }
+
+      case 'photo.uploaded':
+        return e('guests', 'added a photo to the gallery');
+      case 'photo.submitted':
+        return e('guests', 'shared a photo (waiting for approval)');
+      case 'photos.approved':
+      case 'photos.rejected': {
+        const n = Number(meta?.['count'] ?? 0);
+        return e('guests', `${r.action === 'photos.approved' ? 'approved' : 'rejected'} ${n} guest photo${n === 1 ? '' : 's'}`);
+      }
+      case 'photo.removed':
+        return e('guests', 'removed a photo from the gallery');
+      case 'gallery.settings':
+        return e('guests', after?.['guestUploadsEnabled'] ? 'turned on photo sharing for guests' : 'turned off photo sharing for guests');
 
       case 'coadmin.invited':
         return e('organisers', `invited ${str(after?.['email']) || member} as a co-admin`);

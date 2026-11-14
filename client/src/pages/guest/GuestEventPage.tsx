@@ -4,6 +4,7 @@ import { Alert, Spinner } from '../../components/ui';
 import { useCurrentUser } from '../../features/auth/use-auth';
 import { MapPreview } from '../../components/MapPreview';
 import { ActivityDetailsView } from '../../features/activities/ActivityDetailsView';
+import { GuestPhotos } from '../../features/photos/GuestPhotos';
 import { calendarUrl, useGuestLogout, useGuestView, useRsvp } from '../../features/guest-site/use-guest';
 import { ApiError } from '../../lib/api';
 import { formatDateRange, formatDateTime, timeZoneLabel } from '../../lib/format';
@@ -250,6 +251,8 @@ export function GuestEventPage() {
             </section>
           </>
         )}
+
+        {(e.status === 'PUBLISHED' || e.status === 'COMPLETED') && <GuestPhotos activities={view.activities.map((a) => ({ id: a.id, name: a.name }))} />}
 
         {(e.instructions || e.organiserContact) && (
           <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">

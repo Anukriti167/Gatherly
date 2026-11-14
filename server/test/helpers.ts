@@ -1,3 +1,5 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import request from 'supertest';
 import { createApp } from '../src/app.ts';
 import { loadConfig, loadDotEnv } from '../src/config/env.ts';
@@ -16,6 +18,8 @@ export function createTestContext() {
     DATABASE_URL: process.env['TEST_DATABASE_URL'],
     APP_ORIGIN: ORIGIN,
     RATE_LIMIT_ENABLED: 'false',
+    // Photos from tests go to a throwaway folder, never the real storage directory.
+    STORAGE_DIR: join(tmpdir(), 'gatherly-test-storage'),
     SMTP_HOST: '',
   });
   const prisma = createPrisma(config.databaseUrl);

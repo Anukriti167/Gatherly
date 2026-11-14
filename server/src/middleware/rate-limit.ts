@@ -23,6 +23,7 @@ export function createRateLimiters(enabled: boolean) {
     passwordReset: make(15 * MINUTE, 5, 'Too many password reset requests. Please try again later.'),
     memberInvite: make(60 * MINUTE, 30, 'Too many invitations sent. Please try again later.'),
     // Opening invitation links: generous for real guests, but stops token guessing.
+    photoUpload: make(15 * MINUTE, 120, 'Too many uploads at once. Please wait a few minutes and try again.'),
     guestLink: make(15 * MINUTE, 30, 'Too many attempts. Please wait a few minutes and open your invitation link again.'),
   };
 }

@@ -5,10 +5,11 @@ import { Button } from '../../components/ui';
 import { useActivities } from '../activities/use-activities';
 import { useGuests } from '../guests/use-guests';
 import { useOrganisers } from '../organisers/use-organisers';
+import { useGallery } from '../photos/use-photos';
 import { useProposals } from '../proposals/use-proposals';
 import { usePublication } from '../publication/use-publication';
 
-export const EVENT_TABS = ['overview', 'activities', 'guests', 'organisers', 'proposals', 'history'] as const;
+export const EVENT_TABS = ['overview', 'activities', 'guests', 'organisers', 'proposals', 'photos', 'history'] as const;
 export type EventTab = (typeof EVENT_TABS)[number];
 
 const LABEL: Record<EventTab, string> = {
@@ -17,6 +18,7 @@ const LABEL: Record<EventTab, string> = {
   guests: 'Guests',
   organisers: 'Organisers',
   proposals: 'Proposals',
+  photos: 'Photos',
   history: 'History',
 };
 
@@ -54,6 +56,8 @@ export function EventTabs({ event, active, onChange }: { event: EventDetail; act
   const { data: guests } = useGuests(event.id);
   const { data: organisers } = useOrganisers(event.id);
   const { data: proposals } = useProposals(event.id);
+  const { data: gallery } = useGallery({ kind: 'organiser', eventId: event.id });
+  const toReview = gallery?.photos.filter((p) => p.status === 'PENDING_APPROVAL').length ?? 0;
   const openProposals = proposals?.filter((p) => p.status === 'OPEN').length ?? 0;
   const refs = useRef<Partial<Record<EventTab, HTMLButtonElement | null>>>({});
 
@@ -61,6 +65,7 @@ export function EventTabs({ event, active, onChange }: { event: EventDetail; act
     activities: activities?.length,
     guests: guests?.length,
     organisers: organisers?.filter((m) => m.status === 'ACTIVE').length,
+    photos: gallery?.photos.filter((p) => p.status === 'APPROVED').length,
   };
 
   const onKey = (e: KeyboardEvent) => {
@@ -94,6 +99,11 @@ export function EventTabs({ event, active, onChange }: { event: EventDetail; act
           >
             {LABEL[t]}
             {count[t] !== undefined && <span className="rounded-full bg-slate-100 px-1.5 text-xs text-slate-600">{count[t]}</span>}
+            {t === 'photos' && toReview > 0 && (
+              <span className="rounded-full bg-amber-100 px-1.5 text-xs font-semibold text-amber-800" title="Guest photos waiting for approval">
+                {toReview} to review
+              </span>
+            )}
             {t === 'proposals' && openProposals > 0 && (
               <span className="rounded-full bg-amber-100 px-1.5 text-xs font-semibold text-amber-800" title="Open proposals">
                 {openProposals} open

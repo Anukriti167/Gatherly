@@ -26,7 +26,7 @@ import { eventsRoutes } from './modules/events/events.routes.ts';
 import { EventsService } from './modules/events/events.service.ts';
 import { guestsRoutes } from './modules/guests/guests.routes.ts';
 import { GuestsService } from './modules/guests/guests.service.ts';
-import { guestPortalRoutes } from './modules/guest-portal/guest-portal.routes.ts';
+import { guestAuth, guestPortalRoutes } from './modules/guest-portal/guest-portal.routes.ts';
 import { GuestAccessService } from './modules/guest-portal/guest-access.service.ts';
 import { healthRoutes } from './modules/health/health.routes.ts';
 import { invitationsRoutes } from './modules/invitations/invitations.routes.ts';
@@ -34,6 +34,9 @@ import { InvitationsService } from './modules/invitations/invitations.service.ts
 import { OutboxService } from './modules/outbox/outbox.service.ts';
 import { rsvpRoutes } from './modules/rsvp/rsvp.routes.ts';
 import { RsvpService } from './modules/rsvp/rsvp.service.ts';
+import { guestPhotosRoutes, organiserPhotosRoutes, photoFilesRoutes } from './modules/photos/photos.routes.ts';
+import { PhotosService } from './modules/photos/photos.service.ts';
+import { LocalDiskStorage } from './lib/storage.ts';
 import { membershipsRoutes, myInvitationsRoutes } from './modules/memberships/memberships.routes.ts';
 import { MembershipsService } from './modules/memberships/memberships.service.ts';
 import { meRoutes } from './modules/notifications/notifications.routes.ts';
@@ -78,6 +81,7 @@ export function createApp({ config, prisma, mailer, logger }: AppDeps): Express 
     invitations: new InvitationsService(prisma, events, audit, outbox, config),
     guestAccess: new GuestAccessService(prisma, config),
     rsvp: new RsvpService(prisma, events, audit, outbox, notifications, config),
+    photos: new PhotosService(prisma, events, audit, outbox, new LocalDiskStorage(resolve(config.storageDir)), config),
   };
   // Automatic completion of finished events/activities (FR-017, FR-018). Tests call run() directly.
   if (config.env !== 'test') {
@@ -129,6 +133,9 @@ export function createApp({ config, prisma, mailer, logger }: AppDeps): Express 
   api.use('/me', meRoutes(services.notifications));
   api.use('/events/:eventId/history', historyRoutes(services.history));
   api.use('/events/:eventId/invitations', invitationsRoutes(services.invitations));
+  api.use('/events/:eventId/photos', organiserPhotosRoutes(services.photos, limits.photoUpload));
+  api.use('/guest/photos', guestPhotosRoutes(services.photos, guestAuth(services.guestAccess, config.session.guestCookieName), limits.photoUpload));
+  api.use('/photos', photoFilesRoutes(services.photos, services.guestAccess, config.session.guestCookieName));
   api.use('/guest', guestPortalRoutes(services.guestAccess, services.rsvp, config.session.guestCookieName, limits));
   api.use('/events/:eventId/rsvps', rsvpRoutes(services.rsvp));
   api.use('/events/:eventId/publication', publicationRoutes(services.publication));

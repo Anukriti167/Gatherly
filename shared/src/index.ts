@@ -16,3 +16,4 @@ export * from './schemas/proposal.js';
 export * from './types/notifications.js';
 export * from './types/history.js';
 export * from './types/invitations.js';
+export * from './types/photos.js';

@@ -21,11 +21,9 @@ declare global {
 
 const noGuest = () => new AppError(401, 'GUEST_SESSION_REQUIRED', 'Please open the invitation link from your email to see this event.');
 
-/** Mounted at /guest — the personalised guest website's API (no account needed). */
-export function guestPortalRoutes(access: GuestAccessService, rsvp: RsvpService, cookieName: string, limits: RateLimiters): Router {
-  const router = Router();
-
-  const requireGuest: RequestHandler = async (req, res, next) => {
+/** Middleware: requires a valid guest session (invitation link) and sets `req.guest`. */
+export function guestAuth(access: GuestAccessService, cookieName: string): RequestHandler {
+  return async (req, res, next) => {
     const ctx = await access.validate(req.cookies?.[cookieName] as string | undefined);
     if (!ctx) {
       access.clearCookie(res);
@@ -34,6 +32,13 @@ export function guestPortalRoutes(access: GuestAccessService, rsvp: RsvpService,
     req.guest = ctx;
     next();
   };
+}
+
+/** Mounted at /guest — the personalised guest website's API (no account needed). */
+export function guestPortalRoutes(access: GuestAccessService, rsvp: RsvpService, cookieName: string, limits: RateLimiters): Router {
+  const router = Router();
+
+  const requireGuest = guestAuth(access, cookieName);
 
   /** FR-088, FR-092 — exchange the link token for a guest session cookie. */
   router.post('/session', limits.guestLink, validateBody(guestSessionSchema), async (req, res) => {

@@ -51,6 +51,7 @@ model User {
   proposalDecisions   ProposalDecision[]       @relation("ProposalDecider")
   proposalComments    ProposalComment[]        @relation("ProposalCommentAuthor")
   notifications       Notification[]
+  uploadedPhotos      Photo[]                  @relation("PhotoUploadedByUser")
 }
 
 model UserSession {
@@ -169,6 +170,7 @@ model Event {
   notifications  Notification[]
   invitations    Invitation[]
   emails         EmailOutbox[]
+  photos         Photo[]
 
   @@index([status])
   @@index([startsAt])
@@ -268,6 +270,7 @@ model Activity {
   menuCategories   MenuCategory[]
   guestAssignments GuestActivityAssignment[]
   rsvps            Rsvp[]
+  photos           Photo[]
 
   @@index([eventId, startsAt])
 }
@@ -481,6 +484,7 @@ model Guest {
   assignments GuestActivityAssignment[]
   invitation  Invitation?
   rsvps       Rsvp[]
+  photos      Photo[]
 
   @@index([eventId, removedAt])
 }
@@ -727,4 +731,45 @@ model Rsvp {
 
   @@unique([guestId, activityId])
   @@index([activityId, status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Event photo gallery (FR-161 – FR-178, FR-217)
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum PhotoStatus {
+  PENDING_APPROVAL // guest uploads start here (FR-170) and stay out of the gallery (FR-171)
+  APPROVED
+  REJECTED
+  REMOVED // taken down after approval (FR-178)
+}
+
+model Photo {
+  id                String      @id @default(cuid())
+  eventId           String
+  activityId        String? // FR-163 — null = the whole event
+  /// Display version (≤ 2048 px) and thumbnail (≤ 480 px), both stored behind the storage adapter.
+  fullKey           String      @unique
+  thumbKey          String      @unique
+  mimeType          String
+  sizeBytes         Int
+  width             Int?
+  height            Int?
+  caption           String?
+  status            PhotoStatus
+  uploadedByUserId  String?
+  uploadedByGuestId String?
+  reviewedById      String?
+  reviewedAt        DateTime?
+  rejectionReason   String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  event           Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  activity        Activity? @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  uploadedByUser  User?     @relation("PhotoUploadedByUser", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  uploadedByGuest Guest?    @relation(fields: [uploadedByGuestId], references: [id], onDelete: SetNull)
+
+  @@index([eventId, status, createdAt])
+  @@index([uploadedByGuestId, status])
 }

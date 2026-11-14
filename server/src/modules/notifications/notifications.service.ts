@@ -116,6 +116,30 @@ export class NotificationsService {
       });
     }
 
+    // Guest photos waiting for approval (one item per event, not one notification per photo).
+    const pendingPhotos = await this.prisma.photo.groupBy({
+      by: ['eventId'],
+      where: { status: 'PENDING_APPROVAL', event: { status: { in: ['PUBLISHED', 'COMPLETED'] }, memberships: { some: { userId, status: 'ACTIVE' } } } },
+      _count: { _all: true },
+      _min: { createdAt: true },
+    });
+    if (pendingPhotos.length) {
+      const names = new Map(
+        (await this.prisma.event.findMany({ where: { id: { in: pendingPhotos.map((p) => p.eventId) } }, select: { id: true, name: true } })).map((e) => [e.id, e.name]),
+      );
+      for (const p of pendingPhotos) {
+        const n = p._count._all;
+        items.push({
+          kind: 'PHOTO_REVIEW',
+          eventId: p.eventId,
+          eventName: names.get(p.eventId) ?? 'Event',
+          title: `Review ${n} guest photo${n === 1 ? '' : 's'}`,
+          url: `/events/${p.eventId}?tab=photos`,
+          since: (p._min.createdAt ?? new Date()).toISOString(),
+        });
+      }
+    }
+
     return items.sort((a, b) => (a.since < b.since ? -1 : 1)); // oldest first — longest waiting
   }
 }

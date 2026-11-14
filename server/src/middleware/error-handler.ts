@@ -1,4 +1,5 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
+import multer from 'multer';
 import { ZodError } from 'zod';
 import type { ApiErrorBody } from '@gatherly/shared';
 import { AppError } from '../lib/errors.ts';
@@ -33,6 +34,14 @@ export function createErrorHandler(logger: Logger): ErrorRequestHandler {
     } else if (err instanceof db.Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
       status = 409;
       body = { error: { code: 'CONFLICT', message: 'That record already exists' } };
+    } else if (err instanceof multer.MulterError) {
+      status = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+      body = {
+        error: {
+          code: 'UPLOAD',
+          message: err.code === 'LIMIT_FILE_SIZE' ? 'That photo is too large. Please choose a smaller one.' : 'The upload was not in the expected format.',
+        },
+      };
     } else if (err?.type === 'entity.parse.failed') {
       status = 400;
       body = { error: { code: 'BAD_JSON', message: 'Malformed JSON body' } };

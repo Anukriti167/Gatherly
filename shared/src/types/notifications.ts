@@ -23,7 +23,7 @@ export interface NotificationsPage {
 
 /** Something waiting on the signed-in user (computed, not stored). */
 export interface ActionItem {
-  kind: 'PUBLICATION_APPROVAL' | 'PROPOSAL_DECISION';
+  kind: 'PUBLICATION_APPROVAL' | 'PROPOSAL_DECISION' | 'PHOTO_REVIEW';
   eventId: string;
   eventName: string;
   title: string;
