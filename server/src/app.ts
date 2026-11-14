@@ -32,6 +32,8 @@ import { healthRoutes } from './modules/health/health.routes.ts';
 import { invitationsRoutes } from './modules/invitations/invitations.routes.ts';
 import { InvitationsService } from './modules/invitations/invitations.service.ts';
 import { OutboxService } from './modules/outbox/outbox.service.ts';
+import { rsvpRoutes } from './modules/rsvp/rsvp.routes.ts';
+import { RsvpService } from './modules/rsvp/rsvp.service.ts';
 import { membershipsRoutes, myInvitationsRoutes } from './modules/memberships/memberships.routes.ts';
 import { MembershipsService } from './modules/memberships/memberships.service.ts';
 import { meRoutes } from './modules/notifications/notifications.routes.ts';
@@ -75,6 +77,7 @@ export function createApp({ config, prisma, mailer, logger }: AppDeps): Express 
     outbox,
     invitations: new InvitationsService(prisma, events, audit, outbox, config),
     guestAccess: new GuestAccessService(prisma, config),
+    rsvp: new RsvpService(prisma, events, audit, outbox, notifications, config),
   };
   // Automatic completion of finished events/activities (FR-017, FR-018). Tests call run() directly.
   if (config.env !== 'test') {
@@ -126,7 +129,8 @@ export function createApp({ config, prisma, mailer, logger }: AppDeps): Express 
   api.use('/me', meRoutes(services.notifications));
   api.use('/events/:eventId/history', historyRoutes(services.history));
   api.use('/events/:eventId/invitations', invitationsRoutes(services.invitations));
-  api.use('/guest', guestPortalRoutes(services.guestAccess, config.session.guestCookieName, limits));
+  api.use('/guest', guestPortalRoutes(services.guestAccess, services.rsvp, config.session.guestCookieName, limits));
+  api.use('/events/:eventId/rsvps', rsvpRoutes(services.rsvp));
   api.use('/events/:eventId/publication', publicationRoutes(services.publication));
   api.use('/events/:eventId/guests', guestsRoutes(services.guests));
   api.use('/events/:eventId/proposals', proposalsRoutes(services.proposals));

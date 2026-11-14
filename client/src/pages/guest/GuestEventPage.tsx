@@ -4,7 +4,8 @@ import { Alert, Spinner } from '../../components/ui';
 import { useCurrentUser } from '../../features/auth/use-auth';
 import { MapPreview } from '../../components/MapPreview';
 import { ActivityDetailsView } from '../../features/activities/ActivityDetailsView';
-import { useGuestLogout, useGuestView } from '../../features/guest-site/use-guest';
+import { calendarUrl, useGuestLogout, useGuestView, useRsvp } from '../../features/guest-site/use-guest';
+import { ApiError } from '../../lib/api';
 import { formatDateRange, formatDateTime, timeZoneLabel } from '../../lib/format';
 
 const dayLabel = (iso: string, tz: string) => new Intl.DateTimeFormat(undefined, { timeZone: tz, weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(iso));
@@ -86,6 +87,53 @@ function RsvpChip({ a }: { a: GuestActivity }) {
   return <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${styles}`}>{label}</span>;
 }
 
+/** FR-109 – FR-113 — Yes / No for one activity, with the reason when answering isn't possible. */
+function RsvpPanel({ a }: { a: GuestActivity }) {
+  const rsvp = useRsvp();
+  const busy = rsvp.isPending && rsvp.variables?.activityId === a.id;
+  const error = rsvp.error && rsvp.variables?.activityId === a.id ? (rsvp.error instanceof ApiError ? rsvp.error.message : 'Could not save your answer.') : null;
+  if (a.status === 'CANCELLED') return null;
+
+  const closedReason = !a.rsvpOpen
+    ? a.rsvpDeadline && new Date(a.rsvpDeadline) <= new Date()
+      ? 'The RSVP deadline has passed — contact the organisers to change your answer.'
+      : 'Answers are closed for this activity.'
+    : null;
+  const choose = (status: 'CONFIRMED' | 'DECLINED') => rsvp.mutate({ activityId: a.id, status });
+  const btn = (on: boolean, tone: 'yes' | 'no') =>
+    `flex-1 rounded-xl px-4 py-3 text-sm font-semibold ring-1 transition disabled:cursor-not-allowed disabled:opacity-60 ${
+      on
+        ? tone === 'yes'
+          ? 'bg-emerald-600 text-white ring-emerald-600'
+          : 'bg-slate-700 text-white ring-slate-700'
+        : 'bg-white text-slate-800 ring-slate-300 hover:bg-slate-50'
+    }`;
+
+  return (
+    <div className="mt-4 rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
+      <p className="text-sm font-medium text-slate-800">Will you be there?</p>
+      <div className="mt-2 flex gap-2" role="group" aria-label={`RSVP for ${a.name}`}>
+        <button
+          type="button"
+          aria-pressed={a.rsvp === 'CONFIRMED'}
+          disabled={!a.rsvpOpen || busy || (a.full && a.rsvp !== 'CONFIRMED')}
+          onClick={() => choose('CONFIRMED')}
+          className={btn(a.rsvp === 'CONFIRMED', 'yes')}
+        >
+          ✓ I'll be there
+        </button>
+        <button type="button" aria-pressed={a.rsvp === 'DECLINED'} disabled={!a.rsvpOpen || busy} onClick={() => choose('DECLINED')} className={btn(a.rsvp === 'DECLINED', 'no')}>
+          Can't make it
+        </button>
+      </div>
+      {a.full && a.rsvp !== 'CONFIRMED' && a.rsvpOpen && <p className="mt-2 text-xs text-amber-700">This activity is full. Contact the organisers if you'd like to come.</p>}
+      {closedReason && <p className="mt-2 text-xs text-slate-500">{closedReason}</p>}
+      {a.rsvpOpen && a.rsvpDeadline && <p className="mt-2 text-xs text-slate-500">You can change your answer until {formatDateTime(a.rsvpDeadline, a.timezone)}.</p>}
+      {error && <p className="mt-2 text-sm text-red-600" role="alert">{error}</p>}
+    </div>
+  );
+}
+
 function ActivityCard({ a, eventTz }: { a: GuestActivity; eventTz: string }) {
   const location = a.venueAddress || a.venueName;
   return (
@@ -118,8 +166,11 @@ function ActivityCard({ a, eventTz }: { a: GuestActivity; eventTz: string }) {
         </div>
       )}
 
-      {a.rsvpDeadline && a.status === 'SCHEDULED' && (
-        <p className="mt-3 text-xs text-slate-500">Please respond by {formatDateTime(a.rsvpDeadline, a.timezone)}.</p>
+      <RsvpPanel a={a} />
+      {a.status !== 'CANCELLED' && (
+        <a href={calendarUrl(a.id)} download className="mt-3 inline-block text-sm font-medium text-brand-700 hover:underline">
+          📅 Add to calendar
+        </a>
       )}
 
       <div className="mt-4 border-t border-slate-100 pt-4">
@@ -182,7 +233,12 @@ export function GuestEventPage() {
         ) : (
           <>
             <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-              <h2 className="mb-4 text-lg font-semibold">Your schedule</h2>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-lg font-semibold">Your schedule</h2>
+                <a href={calendarUrl()} download className="text-sm font-medium text-brand-700 hover:underline">
+                  📅 Add all to calendar
+                </a>
+              </div>
               <Schedule items={view.itinerary} />
             </section>
 

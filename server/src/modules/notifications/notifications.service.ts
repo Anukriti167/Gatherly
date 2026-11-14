@@ -27,7 +27,8 @@ export class NotificationsService {
     url: string;
     recipients: Recipient[];
     inApp: (r: Recipient) => { title: string; body: string };
-    email: (r: Recipient) => MailMessage;
+    /** Omit for in-app only (e.g. RSVP updates, which would otherwise flood inboxes). */
+    email?: (r: Recipient) => MailMessage;
   }): Promise<void> {
     const unique = [...new Map(opts.recipients.map((r) => [r.id, r])).values()];
     if (unique.length === 0) return;
@@ -37,7 +38,7 @@ export class NotificationsService {
         return { userId: r.id, eventId: opts.eventId, kind: opts.kind, title: title.slice(0, 200), body: body.slice(0, 1000), url: opts.url };
       }),
     });
-    for (const r of unique) sendInBackground(this.mailer, this.logger, opts.email(r));
+    if (opts.email) for (const r of unique) sendInBackground(this.mailer, this.logger, opts.email(r));
   }
 
   async list(userId: string, opts: { limit?: number; before?: string } = {}): Promise<NotificationsPage> {

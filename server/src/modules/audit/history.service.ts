@@ -48,7 +48,7 @@ const FIELD_LABEL: Record<string, string> = {
 const CATEGORY_ACTIONS: Record<EventHistoryEntry['category'], string[]> = {
   event: ['event.created', 'event.updated', 'event.unpublished', 'event.cancelled', 'event.completed'],
   activity: ['activity.'],
-  guests: ['guest.', 'guests.'],
+  guests: ['guest.', 'guests.', 'invitation', 'rsvp.'],
   organisers: ['coadmin.'],
   approval: ['publication.', 'event.published'],
   proposal: ['proposal.'],
@@ -112,7 +112,9 @@ export class EventHistoryService {
     const before = obj(r.before);
     const after = obj(r.after);
     const meta = obj(r.metadata);
-    const base = { id: r.id, at: r.createdAt.toISOString(), actor: r.actorType === 'SYSTEM' ? 'Gatherly' : (r.actorUser?.name ?? 'Someone') };
+    const actor =
+      r.actorType === 'SYSTEM' ? 'Gatherly' : r.actorType === 'GUEST' ? str(obj(r.metadata)?.['guestName']) || 'A guest' : (r.actorUser?.name ?? 'Someone');
+    const base = { id: r.id, at: r.createdAt.toISOString(), actor };
     const proposal = proposals.get(r.entityId);
     const member = members.get(r.entityId) || str(after?.['email']) || str(before?.['email']);
     const version = typeof meta?.['eventVersion'] === 'number' ? ` (version ${meta['eventVersion']})` : '';
@@ -150,6 +152,18 @@ export class EventHistoryService {
       case 'guests.imported': {
         const n = Number(meta?.['imported'] ?? 0);
         return e('guests', `imported ${n} guest${n === 1 ? '' : 's'} from a spreadsheet`);
+      }
+
+      case 'invitations.sent': {
+        const n = Number(meta?.['count'] ?? 0);
+        const resent = Number(meta?.['resent'] ?? 0);
+        return e('guests', `sent ${n} invitation${n === 1 ? '' : 's'}${resent ? ` (${resent} re-sent with a new link)` : ''}`);
+      }
+      case 'invitation.revoked':
+        return e('guests', `revoked ${str(before?.['name']) || 'a guest'}'s invitation link`);
+      case 'rsvp.updated': {
+        const status = str(after?.['status']);
+        return e('guests', `replied “${status === 'CONFIRMED' ? 'Going' : 'Can’t make it'}” to ${str(meta?.['activityName']) || 'an activity'}`);
       }
 
       case 'coadmin.invited':

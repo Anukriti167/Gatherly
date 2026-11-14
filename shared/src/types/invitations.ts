@@ -66,3 +66,25 @@ export interface GuestEventView {
   /** The guest's personal timeline across their activities (FR-097). */
   itinerary: GuestItineraryEntry[];
 }
+
+// ─── RSVP (FR-109 – FR-119) ──────────────────────────────────────────────────
+
+/** A guest's answer for one activity. (PENDING = not answered; guests can't set it back.) */
+export const rsvpSchema = z.object({ status: z.enum(['CONFIRMED', 'DECLINED']) });
+export type RsvpInput = z.input<typeof rsvpSchema>;
+
+/** Organiser view of RSVPs (FR-115, FR-116). */
+export interface ActivityRsvpSummary {
+  activityId: string;
+  invited: number;
+  confirmed: number;
+  declined: number;
+  pending: number;
+  capacity: number | null;
+}
+
+export interface RsvpOverview {
+  activities: ActivityRsvpSummary[];
+  /** guestId → activityId → answer (only answered ones; missing = pending). */
+  answers: Record<string, Record<string, 'CONFIRMED' | 'DECLINED'>>;
+}

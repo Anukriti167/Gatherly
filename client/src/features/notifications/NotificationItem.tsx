@@ -26,6 +26,7 @@ const ICON: Record<string, string> = {
   'coadmin.invited': '🤝',
   'coadmin.removed': '🚪',
   'event.completed': '🏁',
+  'rsvp.updated': '🙋',
 };
 
 /** One notification row; clicking marks it read and opens its link. */

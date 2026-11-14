@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CreateGuestInput, GuestView, ImportGuestsInput, ImportReport, UpdateGuestInput } from '@gatherly/shared';
+import type { CreateGuestInput, GuestView, ImportGuestsInput, ImportReport, RsvpOverview, UpdateGuestInput } from '@gatherly/shared';
 import { api } from '../../lib/api';
 import { live } from '../../lib/live';
 
@@ -50,5 +50,14 @@ export function useImportGuests(eventId: string) {
   return useMutation({
     mutationFn: async (vars: ImportGuestsInput) => (await api.post<{ report: ImportReport }>(`${base(eventId)}/import`, vars)).report,
     onSuccess: (report) => (report.mode === 'commit' ? invalidate() : undefined),
+  });
+}
+
+/** FR-115, FR-116 — RSVP counts per activity and each guest's answers. */
+export function useRsvpOverview(eventId: string) {
+  return useQuery({
+    queryKey: ['events', eventId, 'rsvps'],
+    queryFn: () => api.get<RsvpOverview>(`/events/${encodeURIComponent(eventId)}/rsvps`),
+    ...live,
   });
 }

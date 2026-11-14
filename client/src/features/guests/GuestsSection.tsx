@@ -10,7 +10,7 @@ import { ProposeButton } from '../proposals/ProposeButton';
 import { useProposals } from '../proposals/use-proposals';
 import { InvitationStatus } from '../invitations/InvitationStatus';
 import { useInvitations, useRetryInvitation, useRevokeInvitation, useSendInvitations } from '../invitations/use-invitations';
-import { useAddGuest, useGuests, useRemoveGuest, useUpdateGuest } from './use-guests';
+import { useAddGuest, useGuests, useRemoveGuest, useRsvpOverview, useUpdateGuest } from './use-guests';
 
 type Mode = { kind: 'list' } | { kind: 'add' } | { kind: 'edit'; guest: GuestView } | { kind: 'import' };
 
@@ -37,6 +37,7 @@ function GuestRow({
   onRevokeInvite,
   onRetry,
   inviteBusy,
+  answers,
 }: {
   guest: GuestView;
   activities: ActivityDetail[];
@@ -58,11 +59,19 @@ function GuestRow({
   onRevokeInvite: () => void;
   onRetry: () => void;
   inviteBusy: boolean;
+  /** activityId → this guest's RSVP answer (missing = not answered). */
+  answers: Record<string, 'CONFIRMED' | 'DECLINED'>;
 }) {
+  const mark = (activityId: string) =>
+    answers[activityId] === 'CONFIRMED' ? (
+      <span className="ml-1 font-bold text-emerald-700" title="Going">✓</span>
+    ) : answers[activityId] === 'DECLINED' ? (
+      <span className="ml-1 font-bold text-red-600" title="Not going">✕</span>
+    ) : null;
   const [confirmRevoke, setConfirmRevoke] = useState(false);
   const invited = invitation?.status === 'INVITED';
   const [confirming, setConfirming] = useState(false);
-  const names = guest.allActivities ? null : activities.filter((a) => guest.activityIds.includes(a.id)).map((a) => a.name);
+  const mine = guest.allActivities ? null : activities.filter((a) => guest.activityIds.includes(a.id));
   return (
     <li className="flex flex-wrap items-start justify-between gap-3 py-3">
       <div className="min-w-0">
@@ -76,14 +85,25 @@ function GuestRow({
         </p>
         <p className="mt-1 flex flex-wrap gap-1 text-xs">
           {(canInvite || invitation?.status !== 'NOT_INVITED') && <InvitationStatus inv={invitation} />}
-          {names === null ? (
-            <span className="rounded-full bg-brand-50 px-2 py-0.5 font-medium text-brand-700">All activities</span>
-          ) : names.length === 0 ? (
+          {mine === null ? (
+            <>
+              <span className="rounded-full bg-brand-50 px-2 py-0.5 font-medium text-brand-700">All activities</span>
+              {activities
+                .filter((a) => answers[a.id])
+                .map((a) => (
+                  <span key={a.id} className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                    {a.name}
+                    {mark(a.id)}
+                  </span>
+                ))}
+            </>
+          ) : mine.length === 0 ? (
             <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800">Not assigned to any activity</span>
           ) : (
-            names.map((n) => (
-              <span key={n} className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
-                {n}
+            mine.map((a) => (
+              <span key={a.id} className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                {a.name}
+                {mark(a.id)}
               </span>
             ))
           )}
@@ -164,6 +184,8 @@ export function GuestsSection({ event }: { event: EventDetail }) {
   const revokeInvite = useRevokeInvitation(event.id);
   const retryInvite = useRetryInvitation(event.id);
   const uninvited = invitations.filter((i) => i.status === 'NOT_INVITED').length;
+  const { data: rsvps } = useRsvpOverview(event.id);
+  const rsvpOf = new Map(rsvps?.activities.map((r) => [r.activityId, r]) ?? []);
   const [mode, setMode] = useState<Mode>({ kind: 'list' });
   const [query, setQuery] = useState('');
   const [activityFilter, setActivityFilter] = useState('');
@@ -194,19 +216,30 @@ export function GuestsSection({ event }: { event: EventDetail }) {
         </div>
         {canEdit && mode.kind === 'list' && (
           <div className="flex flex-wrap gap-2">
-            {canInvite && uninvited > 0 && (
-              <Button
-                loading={sendInvites.isPending && sendInvites.variables === undefined}
-                onClick={() =>
-                  sendInvites.mutate(undefined, {
-                    onSuccess: (r) => setNotice({ tone: 'success', text: `${r.queued} invitation${r.queued === 1 ? '' : 's'} on the way — each guest gets their own personal link.` }),
-                    onError: (e) => setNotice({ tone: 'error', text: e instanceof ApiError ? e.message : 'Could not send invitations.' }),
-                  })
-                }
-              >
-                ✉ Send invitations ({uninvited})
-              </Button>
-            )}
+            {canInvite &&
+              (uninvited > 0 ? (
+                <Button
+                  loading={sendInvites.isPending && sendInvites.variables === undefined}
+                  onClick={() =>
+                    sendInvites.mutate(undefined, {
+                      onSuccess: (r) => setNotice({ tone: 'success', text: `${r.queued} invitation${r.queued === 1 ? '' : 's'} on the way — each guest gets their own personal link.` }),
+                      onError: (e) => setNotice({ tone: 'error', text: e instanceof ApiError ? e.message : 'Could not send invitations.' }),
+                    })
+                  }
+                >
+                  ✉ Send invitations ({uninvited})
+                </Button>
+              ) : (
+                // Stays visible so it's clear why there's nothing to send. Bulk re-send is deliberately not
+                // offered: re-sending replaces each guest's link, which would break every link already sent.
+                <Button
+                  variant="secondary"
+                  disabled
+                  title="Everyone on the list has been invited. Guests you add later can be invited here; use Resend on a guest to send them a fresh link."
+                >
+                  ✓ Everyone is invited
+                </Button>
+              ))}
             <Button variant="ghost" onClick={() => downloadGuestTemplate(activities.map((a) => a.name))}>
               ⬇ CSV template
             </Button>
@@ -265,7 +298,15 @@ export function GuestsSection({ event }: { event: EventDetail }) {
 
       {/* FR-081 — how many guests each activity has */}
       {guests && guests.length > 0 && activities.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Filter guests by activity">
+          <button
+            type="button"
+            aria-pressed={activityFilter === ''}
+            onClick={() => setActivityFilter('')}
+            className={`rounded-lg px-3 py-1.5 text-sm ring-1 ${activityFilter === '' ? 'bg-brand-600 text-white ring-brand-600' : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50'}`}
+          >
+            All guests <span className={activityFilter === '' ? 'text-brand-100' : 'text-slate-500'}>· {guests.length}</span>
+          </button>
           {activities.map((a) => {
             const n = guests.filter((g) => invitedTo(g, a.id)).length;
             const active = activityFilter === a.id;
@@ -278,6 +319,12 @@ export function GuestsSection({ event }: { event: EventDetail }) {
                 className={`rounded-lg px-3 py-1.5 text-sm ring-1 ${active ? 'bg-brand-600 text-white ring-brand-600' : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50'}`}
               >
                 {a.name} <span className={active ? 'text-brand-100' : 'text-slate-500'}>· {n}</span>
+                {rsvpOf.get(a.id) && (rsvpOf.get(a.id)!.confirmed > 0 || rsvpOf.get(a.id)!.declined > 0) && (
+                  <span className={`ml-1.5 text-xs ${active ? 'text-white' : 'text-slate-600'}`} title={`${rsvpOf.get(a.id)!.confirmed} going · ${rsvpOf.get(a.id)!.declined} not going · ${rsvpOf.get(a.id)!.pending} no answer`}>
+                    <span className={active ? '' : 'text-emerald-700'}>✓{rsvpOf.get(a.id)!.confirmed}</span>{' '}
+                    <span className={active ? '' : 'text-red-600'}>✕{rsvpOf.get(a.id)!.declined}</span>
+                  </span>
+                )}
                 {a.capacity && n > a.capacity && <span className="ml-1 text-amber-600" title="More guests than capacity">⚠</span>}
               </button>
             );
@@ -325,6 +372,7 @@ export function GuestsSection({ event }: { event: EventDetail }) {
               canEdit={canEdit}
               canRemove={canRemove}
               invitation={invitationOf.get(g.id)}
+              answers={rsvps?.answers[g.id] ?? {}}
               canInvite={canInvite}
               canRevokeInvite={canRevokeInvite}
               inviteBusy={

@@ -47,3 +47,16 @@ export function useOpenAsGuest() {
     onSuccess: () => qc.invalidateQueries({ queryKey: guestKey }),
   });
 }
+
+/** FR-109 — answer for one activity; the server returns the refreshed page data. */
+export function useRsvp() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: { activityId: string; status: 'CONFIRMED' | 'DECLINED' }) =>
+      (await api.put<{ view: GuestEventView }>(`/guest/rsvps/${encodeURIComponent(vars.activityId)}`, { status: vars.status })).view,
+    onSuccess: (view) => qc.setQueryData(guestKey, view),
+  });
+}
+
+/** FR-190 — calendar file download links (the guest cookie authorises them). */
+export const calendarUrl = (activityId?: string) => `/api/v1/guest/calendar.ics${activityId ? `?activityId=${encodeURIComponent(activityId)}` : ''}`;
