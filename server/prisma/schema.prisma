@@ -1,0 +1,730 @@
+// Gatherly data model.
+//
+// Conventions
+// - IDs are cuids. All timestamps are stored in UTC; the IANA `timezone` column on
+//   events/activities is what the UI uses to render local times (FR-009, FR-020, FR-191).
+// - Secrets (session tokens, reset tokens, invitation tokens) are stored ONLY as SHA-256 hashes.
+// - Avoid provider-specific native types so the schema stays portable.
+// - Constraints Prisma cannot express (e.g. "exactly one OWNER per event", FR-060) are added as
+//   raw SQL inside the migration files — see prisma/migrations/*/migration.sql.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Identity & accounts (FR-001 – FR-007)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique // stored normalised (trimmed, lower-case)
+  name            String
+  passwordHash    String
+  phone           String? // FR-005
+  emailVerifiedAt DateTime?
+  profileAssetId  String? // FR-004 profile image (Phase 2)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  profileAsset        MediaAsset?              @relation("UserProfileImage", fields: [profileAssetId], references: [id], onDelete: SetNull)
+  sessions            UserSession[]
+  passwordResetTokens PasswordResetToken[]
+  emailVerifyTokens   EmailVerificationToken[]
+  memberships         EventMembership[]        @relation("MembershipUser")
+  invitedMemberships  EventMembership[]        @relation("MembershipInvitedBy")
+  createdEvents       Event[]                  @relation("EventCreatedBy")
+  uploadedAssets      MediaAsset[]             @relation("AssetUploadedBy")
+  auditEntries        AuditLog[]
+  initiatedRounds     ApprovalRound[]          @relation("RoundInitiatedBy")
+  roundApprovals      RoundApprover[]          @relation("RoundApprover")
+  approvalDecisions   ApprovalDecision[]       @relation("DecisionApprover")
+  proposals           ChangeProposal[]         @relation("ProposalProposer")
+  proposalRevisions   ProposalRevision[]       @relation("ProposalRevisionAuthor")
+  proposalApprovals   ProposalApprover[]       @relation("ProposalApprover")
+  proposalDecisions   ProposalDecision[]       @relation("ProposalDecider")
+  proposalComments    ProposalComment[]        @relation("ProposalCommentAuthor")
+  notifications       Notification[]
+}
+
+model UserSession {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  ipAddress  String?
+  userAgent  String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Events & membership (FR-008 – FR-018, FR-060 – FR-067, FR-221)
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum EventStatus {
+  DRAFT
+  PENDING_APPROVAL
+  PUBLISHED
+  COMPLETED
+  CANCELLED
+}
+
+// FR-010 / FR-011: descriptive only — never used to restrict functionality.
+enum EventType {
+  WEDDING
+  BIRTHDAY
+  ANNIVERSARY
+  CONFERENCE
+  SUMMIT
+  WORKSHOP
+  MEETUP
+  PARTY
+  OTHER
+}
+
+enum PlanningPath {
+  FORMAL
+  INFORMAL
+}
+
+model Event {
+  id              String        @id @default(cuid())
+  name            String
+  description     String        @default("")
+  eventType       EventType
+  customTypeLabel String? // e.g. "Housewarming" when eventType = OTHER
+  planningPath    PlanningPath? // FR-047 (optional)
+  status          EventStatus   @default(DRAFT)
+  /// Incremented on every substantive edit; approvals bind to an exact version (FR-143, FR-225, FR-228).
+  version         Int           @default(1)
+  startsAt        DateTime
+  endsAt          DateTime
+  timezone        String
+
+  // Cover image (FR-037 – FR-041): either an uploaded asset or a bundled library image key.
+  coverAssetId    String?
+  coverLibraryKey String?
+
+  // Guest-facing extras (FR-105)
+  instructions          String?
+  organiserContactName  String?
+  organiserContactEmail String?
+  organiserContactPhone String?
+
+  guestUploadsEnabled Boolean @default(false) // FR-168
+
+  publishedAt DateTime?
+  completedAt DateTime?
+  cancelledAt DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  createdBy      User              @relation("EventCreatedBy", fields: [createdById], references: [id])
+  coverAsset     MediaAsset?       @relation("EventCover", fields: [coverAssetId], references: [id], onDelete: SetNull)
+  memberships    EventMembership[]
+  activities     Activity[]
+  auditLog       AuditLog[]
+  approvalRounds ApprovalRound[]
+  guests         Guest[]
+  proposals      ChangeProposal[]
+  notifications  Notification[]
+  invitations    Invitation[]
+  emails         EmailOutbox[]
+
+  @@index([status])
+  @@index([startsAt])
+}
+
+enum MembershipRole {
+  OWNER
+  CO_ADMIN
+}
+
+enum MembershipStatus {
+  INVITED // co-admin invitation awaiting acceptance
+  ACTIVE
+  DECLINED
+  REMOVED
+}
+
+/// Event-specific roles (FR-066). Exactly one ACTIVE OWNER per event is enforced by a
+/// partial unique index added in the migration SQL (FR-060).
+model EventMembership {
+  id          String           @id @default(cuid())
+  eventId     String
+  userId      String
+  role        MembershipRole
+  status      MembershipStatus
+  invitedById String?
+  invitedAt   DateTime         @default(now())
+  respondedAt DateTime?
+  removedAt   DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  event     Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User  @relation("MembershipUser", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy User? @relation("MembershipInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@unique([eventId, userId])
+  @@index([userId, status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Activities & activity-specific information (FR-019 – FR-036)
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum ActivityStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+model Activity {
+  id          String         @id @default(cuid())
+  eventId     String
+  name        String
+  description String         @default("")
+  status      ActivityStatus @default(SCHEDULED)
+  startsAt    DateTime
+  endsAt      DateTime
+  timezone    String
+  sortOrder   Int            @default(0)
+
+  // Venue (FR-021, FR-186 – FR-188). Entered manually; place id kept for a future provider.
+  venueName         String?
+  venueAddress      String?
+  venueLatitude     Float?
+  venueLongitude    Float?
+  venuePlaceId      String?
+  virtualMeetingUrl String? // FR-193
+
+  capacity     Int? // FR-022
+  rsvpDeadline DateTime? // FR-119
+
+  coverAssetId    String? // FR-042 (falls back to the event cover, FR-043)
+  coverLibraryKey String?
+
+  dressCode        String? // FR-032
+  themeDescription String? // FR-033
+  themeColors      Json? // FR-033 — array of hex colours
+  instructions     String? // FR-034
+
+  // FR-035: optional sections can be hidden from guests when irrelevant.
+  showPeople       Boolean @default(true)
+  showItinerary    Boolean @default(true)
+  showMenu         Boolean @default(true)
+  showDressCode    Boolean @default(true)
+  showTheme        Boolean @default(true)
+  showInstructions Boolean @default(true)
+
+  cancelledAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  event            Event                     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  coverAsset       MediaAsset?               @relation("ActivityCover", fields: [coverAssetId], references: [id], onDelete: SetNull)
+  people           ActivityPerson[]
+  itinerary        ItineraryItem[]
+  menuCategories   MenuCategory[]
+  guestAssignments GuestActivityAssignment[]
+  rsvps            Rsvp[]
+
+  @@index([eventId, startsAt])
+}
+
+enum ActivityPersonRole {
+  SPEAKER
+  PERFORMER
+  PARTICIPANT
+}
+
+/// FR-023
+model ActivityPerson {
+  id         String             @id @default(cuid())
+  activityId String
+  role       ActivityPersonRole
+  name       String
+  title      String? // e.g. "Keynote", "DJ", "Best man"
+  bio        String?
+  sortOrder  Int                @default(0)
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([activityId])
+}
+
+/// FR-024 – FR-028. Displayed in chronological order; `position` breaks ties / manual reorder.
+model ItineraryItem {
+  id          String    @id @default(cuid())
+  activityId  String
+  title       String
+  description String?
+  startsAt    DateTime
+  endsAt      DateTime?
+  position    Int       @default(0)
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([activityId, startsAt])
+}
+
+/// FR-029, FR-030
+model MenuCategory {
+  id         String @id @default(cuid())
+  activityId String
+  name       String // e.g. Starters, Main Course, Desserts, Beverages
+  position   Int    @default(0)
+
+  activity Activity   @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  items    MenuItem[]
+
+  @@index([activityId])
+}
+
+/// FR-031: dietary information as tags, e.g. ["vegetarian", "gluten-free", "contains-nuts"].
+model MenuItem {
+  id          String  @id @default(cuid())
+  categoryId  String
+  name        String
+  description String?
+  dietaryTags Json?
+  position    Int     @default(0)
+
+  category MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Media (FR-037 – FR-044, gallery later)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A stored binary (cover image, profile image, gallery photo). Bytes live behind the storage
+/// adapter (local disk or DB) — never directly web-accessible; served via authorised routes.
+model MediaAsset {
+  id               String   @id @default(cuid())
+  storageKey       String   @unique
+  mimeType         String
+  sizeBytes        Int
+  width            Int?
+  height           Int?
+  uploadedByUserId String?
+  createdAt        DateTime @default(now())
+
+  uploadedBy     User?      @relation("AssetUploadedBy", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  eventCovers    Event[]    @relation("EventCover")
+  activityCovers Activity[] @relation("ActivityCover")
+  userProfiles   User[]     @relation("UserProfileImage")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Audit log (FR-197 – FR-199) — append-only
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum ActorType {
+  USER
+  GUEST
+  SYSTEM
+}
+
+model AuditLog {
+  id           String    @id @default(cuid())
+  eventId      String?
+  actorType    ActorType
+  actorUserId  String?
+  actorGuestId String?
+  action       String // e.g. "event.created", "activity.updated", "cover.changed"
+  entityType   String
+  entityId     String
+  before       Json?
+  after        Json?
+  metadata     Json?
+  createdAt    DateTime  @default(now())
+
+  event     Event? @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  actorUser User?  @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([eventId, createdAt])
+  @@index([entityType, entityId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Approval rounds (FR-222 – FR-230 publication; reused for change proposals)
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum ApprovalKind {
+  PUBLICATION
+  CHANGE_PROPOSAL
+}
+
+enum ApprovalRoundStatus {
+  OPEN
+  APPROVED // everyone approved the same version → applied
+  CHANGES_REQUESTED // an approver sent it back (FR-227)
+  SUPERSEDED // replaced by a new round, e.g. the event was edited while pending (FR-228)
+  WITHDRAWN
+}
+
+enum ApprovalDecisionType {
+  APPROVE
+  REQUEST_CHANGES
+}
+
+/// One attempt to get unanimous approval for a specific event version.
+model ApprovalRound {
+  id            String              @id @default(cuid())
+  eventId       String
+  kind          ApprovalKind
+  status        ApprovalRoundStatus @default(OPEN)
+  /// The exact event version being approved (FR-225).
+  eventVersion  Int
+  initiatedById String
+  reason        String? // e.g. "submitted", "event edited while pending"
+  createdAt     DateTime            @default(now())
+  closedAt      DateTime?
+
+  event       Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  initiatedBy User               @relation("RoundInitiatedBy", fields: [initiatedById], references: [id])
+  approvers   RoundApprover[]
+  decisions   ApprovalDecision[]
+
+  @@index([eventId, kind, status])
+}
+
+/// Fixed snapshot of who must approve, taken when the round opens (FR-224).
+model RoundApprover {
+  roundId String
+  userId  String
+
+  round ApprovalRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  user  User          @relation("RoundApprover", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([roundId, userId])
+}
+
+/// FR-229 — decision, approver, timestamp, event version and comment.
+model ApprovalDecision {
+  id           String               @id @default(cuid())
+  roundId      String
+  approverId   String
+  decision     ApprovalDecisionType
+  eventVersion Int
+  comment      String?
+  createdAt    DateTime             @default(now())
+
+  round    ApprovalRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  approver User          @relation("DecisionApprover", fields: [approverId], references: [id], onDelete: Cascade)
+
+  @@index([roundId, approverId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Guests & activity assignments (FR-068 – FR-082)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// One shared guest list per event (FR-072). Guests don't need Gatherly accounts.
+/// Removal is a soft delete (`removedAt`) so audit history and invitation revocation keep working.
+model Guest {
+  id            String    @id @default(cuid())
+  eventId       String
+  name          String
+  email         String // normalised; unique per event among non-removed guests (FR-071, migration SQL)
+  phone         String? // FR-073 — visible to organisers only (FR-082)
+  /// FR-077 — invited to every activity, including ones added later.
+  allActivities Boolean   @default(false)
+  createdById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  removedAt     DateTime?
+
+  event       Event                     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  assignments GuestActivityAssignment[]
+  invitation  Invitation?
+  rsvps       Rsvp[]
+
+  @@index([eventId, removedAt])
+}
+
+/// FR-076 — explicit activity assignments (ignored when `allActivities` is true).
+model GuestActivityAssignment {
+  guestId    String
+  activityId String
+  createdAt  DateTime @default(now())
+
+  guest    Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@id([guestId, activityId])
+  @@index([activityId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Change proposals for published events (FR-132 – FR-153)
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum ProposalStatus {
+  OPEN // under discussion until every required approver approves the same version (FR-139, FR-140)
+  APPLIED // unanimously approved and applied (FR-144, FR-145)
+  WITHDRAWN // withdrawn by the proposer — recorded separately from rejection (FR-147, FR-148)
+  CLOSED // closed by the system, e.g. the event was unpublished/cancelled by another proposal
+}
+
+enum ProposalDecisionType {
+  APPROVE
+  OBJECT
+}
+
+model ChangeProposal {
+  id           String         @id @default(cuid())
+  eventId      String
+  proposerId   String
+  status       ProposalStatus @default(OPEN)
+  title        String
+  /// Current revision number; approvals only count for this version (FR-136, FR-143).
+  version      Int            @default(1)
+  closedReason String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  closedAt     DateTime?
+
+  event     Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  proposer  User               @relation("ProposalProposer", fields: [proposerId], references: [id])
+  revisions ProposalRevision[]
+  approvers ProposalApprover[]
+  decisions ProposalDecision[]
+  comments  ProposalComment[]
+
+  @@index([eventId, status])
+}
+
+/// One version of a proposal: description + typed change list (JSON, validated by shared schemas).
+model ProposalRevision {
+  id          String   @id @default(cuid())
+  proposalId  String
+  version     Int
+  description String
+  changes     Json
+  createdById String
+  createdAt   DateTime @default(now())
+
+  proposal  ChangeProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  createdBy User           @relation("ProposalRevisionAuthor", fields: [createdById], references: [id])
+
+  @@unique([proposalId, version])
+}
+
+/// Required approvers, recorded when the proposal is created (FR-137, FR-146).
+model ProposalApprover {
+  proposalId String
+  userId     String
+
+  proposal ChangeProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  user     User           @relation("ProposalApprover", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([proposalId, userId])
+}
+
+/// FR-138, FR-149 — approval / objection history, bound to a proposal version.
+model ProposalDecision {
+  id              String               @id @default(cuid())
+  proposalId      String
+  approverId      String
+  decision        ProposalDecisionType
+  proposalVersion Int
+  comment         String?
+  createdAt       DateTime             @default(now())
+
+  proposal ChangeProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  approver User           @relation("ProposalDecider", fields: [approverId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId, approverId])
+}
+
+/// FR-141, FR-149 — discussion between organisers.
+model ProposalComment {
+  id         String   @id @default(cuid())
+  proposalId String
+  authorId   String
+  body       String
+  createdAt  DateTime @default(now())
+
+  proposal ChangeProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  author   User           @relation("ProposalCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// In-app notifications (FR-150, FR-160) — every organiser email also lands here
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  eventId   String?
+  /// e.g. "proposal.created", "publication.requested", "guests.changed"
+  kind      String
+  title     String
+  body      String
+  /// In-app path to open, e.g. /events/abc#proposal-xyz
+  url       String
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event? @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Guest invitations & guest access (FR-083 – FR-093, FR-202, FR-203)
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum InvitationStatus {
+  ACTIVE
+  REVOKED
+}
+
+/// One invitation per guest. The link token is stored only as a SHA-256 hash; re-sending rotates it.
+model Invitation {
+  id             String           @id @default(cuid())
+  eventId        String
+  guestId        String           @unique
+  tokenHash      String           @unique
+  status         InvitationStatus @default(ACTIVE)
+  /// Optional hard expiry (FR-091). Null = valid until revoked (FR-218: still works after the event).
+  expiresAt      DateTime?
+  sendCount      Int              @default(0)
+  firstSentAt    DateTime?
+  lastSentAt     DateTime?
+  lastAccessedAt DateTime?
+  revokedAt      DateTime?
+  revokedById    String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  event    Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  guest    Guest          @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  sessions GuestSession[]
+  emails   EmailOutbox[]
+
+  @@index([eventId, status])
+}
+
+/// Created after a valid invitation link is opened (FR-092); revoked with the invitation (FR-203).
+model GuestSession {
+  id           String    @id @default(cuid())
+  invitationId String
+  tokenHash    String    @unique
+  createdAt    DateTime  @default(now())
+  lastSeenAt   DateTime  @default(now())
+  expiresAt    DateTime
+  revokedAt    DateTime?
+
+  invitation Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+
+  @@index([invitationId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Outgoing email queue (FR-160) — rate-limited sending with retries and status
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum EmailStatus {
+  QUEUED
+  SENDING
+  SENT
+  FAILED
+}
+
+model EmailOutbox {
+  id            String      @id @default(cuid())
+  kind          String // e.g. "invitation", "rsvp.confirmation"
+  toEmail       String
+  toName        String?
+  subject       String
+  text          String
+  html          String
+  status        EmailStatus @default(QUEUED)
+  attempts      Int         @default(0)
+  lastError     String?
+  nextAttemptAt DateTime    @default(now())
+  sentAt        DateTime?
+  eventId       String?
+  invitationId  String?
+  createdAt     DateTime    @default(now())
+
+  event      Event?      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  invitation Invitation? @relation(fields: [invitationId], references: [id], onDelete: SetNull)
+
+  @@index([status, nextAttemptAt])
+  @@index([invitationId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RSVPs — one per guest per activity (FR-109 – FR-119)
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum RsvpStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+}
+
+model Rsvp {
+  id          String     @id @default(cuid())
+  guestId     String
+  activityId  String
+  status      RsvpStatus @default(PENDING)
+  respondedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  guest    Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([guestId, activityId])
+  @@index([activityId, status])
+}

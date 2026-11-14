@@ -1,0 +1,575 @@
+GATHERLY
+Functional RequirementsSpecification
+Consolidated Requirements
+230 Functional Requirements
+Prepared: 13 November 2026
+Document overview
+This document contains the consolidated functional requirements for Gatherly. Requirement identifiers (FR-001 to FR-230) are retained to support discussion, implementation tracking, testing and future revisions.
+The requirements are organised by product capability. The final section records the additional requirements introduced for the initial publication approval workflow.
+Contents
+2.1 User registration and account management
+2.2 Event creation and management
+2.3 Activity management and activity-specific information
+2.4 Event cover images and customisation
+2.5 Template-based event creation
+2.6 Event owner and co-admin management
+2.7 Guest management and activity assignments
+2.8 Invitation and guest access management
+2.9 Personalised event website
+2.10 RSVP management
+2.11 Guest suggestions and discussions
+2.12 Event change proposals and unanimous approval
+2.13 Announcements and notifications
+2.14 Event photo gallery and management
+2.15 Event history
+2.16 External API integrations
+2.17 Audit logs, security and privacy
+2.18 Public-facing website and contact
+2.19 Optional AI capabilities
+2.20 Additional confirmed requirements and deferred capability
+2.21 New requirements — initial publication approval
+2. Functional requirements
+2.1 User registration and account management
+ID
+ | Functional requirement
+ | FR-001
+ | Register using email address and password.
+ | FR-002
+ | Log in and log out securely.
+ | FR-003
+ | Reset password through email verification.
+ | FR-004
+ | Manage profile, including name, email and profile image.
+ | FR-005
+ | Optionally add, update or remove a phone number.
+ | FR-006
+ | View a dashboard of events owned, co-administered, attended or invited to.
+ | FR-007
+ | View upcoming, ongoing and completed events separately.
+ | 
+2.2 Event creation and management
+ID
+ | Functional requirement
+ | FR-008
+ | Allow registered users to create an event.
+ | FR-009
+ | Specify event name, description, event type, start date, end date and timezone.
+ | FR-010
+ | Support descriptive event types such as weddings, birthdays, conferences, summits, workshops and other occasions.
+ | FR-011
+ | Do not restrict event functionality based on selected event type.
+ | FR-012
+ | Allow an event to contain one or more activities.
+ | FR-013
+ | Add, edit and remove activities while the event is in Draft status.
+ | FR-014
+ | Save an event as a Draft.
+ | FR-015
+ | Publish an event after completing required information and obtaining all required approvals.
+ | FR-016
+ | Allow authorised administrators to view and manage event and activity details.
+ | FR-017
+ | Support event statuses: Draft, Pending Approval, Published, Completed and Cancelled.
+ | FR-018
+ | Support activity statuses: Scheduled, Completed and Cancelled.
+ | 
+2.3 Activity management and activity-specific information
+ID
+ | Functional requirement
+ | FR-019
+ | Give each activity its own name and description.
+ | FR-020
+ | Give each activity its own date, start time, end time and timezone.
+ | FR-021
+ | Give each activity its own physical venue or virtual meeting link.
+ | FR-022
+ | Allow optional activity capacity limits.
+ | FR-023
+ | Allow speaker, performer and participant information on an activity.
+ | FR-024
+ | Allow administrators to define a detailed itinerary for each activity.
+ | FR-025
+ | Allow multiple itinerary entries within an activity.
+ | FR-026
+ | Give each itinerary entry a title, description, start time and optional end time.
+ | FR-027
+ | Allow administrators to add, edit, delete and reorder itinerary entries.
+ | FR-028
+ | Display itinerary entries in chronological order.
+ | FR-029
+ | Allow administrators to provide a food and beverage menu for an activity.
+ | FR-030
+ | Organise menu items into categories such as Starters, Main Course, Desserts and Beverages.
+ | FR-031
+ | Allow dietary information for menu items.
+ | FR-032
+ | Allow administrators to specify an activity dress code.
+ | FR-033
+ | Allow administrators to describe an activity theme, including colours and decoration concepts.
+ | FR-034
+ | Allow additional activity-specific instructions.
+ | FR-035
+ | Allow optional activity sections to remain unpublished when irrelevant.
+ | FR-036
+ | Allow activity-specific information to be edited independently of other activities.
+ | 
+2.4 Event cover images and customisation
+ID
+ | Functional requirement
+ | FR-037
+ | Provide a curated default cover image based on selected event type.
+ | FR-038
+ | Allow the owner or co-admin to replace the default cover image.
+ | FR-039
+ | Allow administrators to select an image from the image library.
+ | FR-040
+ | Allow administrators to upload a custom cover image.
+ | FR-041
+ | Display the selected cover image on the event website and relevant invitation emails.
+ | FR-042
+ | Allow individual activities to have optional cover images.
+ | FR-043
+ | Use the parent event cover image when an activity has no separate cover image.
+ | FR-044
+ | Validate uploaded cover image formats and file sizes.
+ | FR-045
+ | Record cover image changes in the event activity log.
+ | FR-046
+ | Do not require unanimous co-admin approval for presentation-only cover image changes.
+ | 
+2.5 Template-based event creation
+ID
+ | Functional requirement
+ | FR-047
+ | Provide optional Formal and Informal planning paths during event creation.
+ | FR-048
+ | Suggest relevant event templates based on the selected planning path.
+ | FR-049
+ | Allow users to skip planning path and template selection and create from scratch.
+ | FR-050
+ | Provide templates for weddings, birthdays, conferences, workshops, summits and other occasions.
+ | FR-051
+ | Templates provide suggested activities and relevant itinerary entries.
+ | FR-052
+ | Templates may provide suggested menus, dress codes, themes, instructions and cover images.
+ | FR-053
+ | Allow users to customise, add or remove all template-generated information.
+ | FR-054
+ | Allow users to add activities not included in the selected template.
+ | FR-055
+ | Allow users to preview and edit template-generated information before publishing.
+ | FR-056
+ | Use the same generic Event and Activity data model for all templates.
+ | FR-057
+ | Allow users to save their own event configurations as reusable templates.
+ | FR-058
+ | Allow users to reuse saved templates for future events.
+ | FR-059
+ | Ensure changes to an event created from a template do not modify the original template.
+ | 
+2.6 Event owner and co-admin management
+ID
+ | Functional requirement
+ | FR-060
+ | Require exactly one owner for every event.
+ | FR-061
+ | Give the event owner complete control over the event.
+ | FR-062
+ | Allow the owner to invite registered users as co-admins.
+ | FR-063
+ | Allow the owner to remove co-admins.
+ | FR-064
+ | Co-admins shall have the same event-management permissions as the owner, except they cannot manage co-admin membership or transfer ownership.
+ | FR-065
+ | Allow the owner to transfer ownership to another eligible registered user.
+ | FR-066
+ | Maintain event-specific roles and permissions.
+ | FR-067
+ | Prevent users without administrative permissions from modifying event information.
+ | 
+2.7 Guest management and activity assignments
+ID
+ | Functional requirement
+ | FR-068
+ | Allow the owner and co-admins to add guests manually.
+ | FR-069
+ | Allow the owner and co-admins to upload a guest list in a supported spreadsheet format.
+ | FR-070
+ | Validate uploaded guest information, including guest name and email address.
+ | FR-071
+ | Identify duplicate guest entries within the same event.
+ | FR-072
+ | Maintain one shared guest list at the parent-event level.
+ | FR-073
+ | Allow administrators to optionally provide a guest phone number.
+ | FR-074
+ | Support an optional phone number column during guest list imports.
+ | FR-075
+ | Allow administrators to update guest contact information.
+ | FR-076
+ | Allow administrators to assign guests to one or more activities.
+ | FR-077
+ | Allow guests to be assigned to all activities.
+ | FR-078
+ | Allow administrators to modify guest activity assignments.
+ | FR-079
+ | Allow administrators to remove guests from an event.
+ | FR-080
+ | Ensure guests can only access activities to which they are assigned.
+ | FR-081
+ | Allow administrators to view guests assigned to each activity.
+ | FR-082
+ | Make guest phone numbers visible only to the event owner and authorised co-admins.
+ | 
+2.8 Invitation and guest access management
+ID
+ | Functional requirement
+ | FR-083
+ | Allow administrators to send event invitations to guests through email.
+ | FR-084
+ | Include event name, relevant event details and a personalised access link in each invitation.
+ | FR-085
+ | Include a summary of activities assigned to the guest in the invitation.
+ | FR-086
+ | Generate a unique and secure invitation token for each guest-event invitation.
+ | FR-087
+ | Allow guests to access their personalised event website without registration.
+ | FR-088
+ | Validate invitation tokens before granting guest access.
+ | FR-089
+ | Prevent guests from accessing another guest's personalised information.
+ | FR-090
+ | Allow administrators to revoke invitations.
+ | FR-091
+ | Prevent revoked or expired invitations from granting access.
+ | FR-092
+ | Create a secure guest session after successful invitation validation.
+ | FR-093
+ | Allow guests to revisit their event website using valid invitation access.
+ | 
+2.9 Personalised event website
+ID
+ | Functional requirement
+ | FR-094
+ | Dynamically generate an event website for every published event.
+ | FR-095
+ | Display the event cover image, name, description and relevant details.
+ | FR-096
+ | Display only activities assigned to the visiting guest.
+ | FR-097
+ | Display the guest's personalised itinerary across assigned activities in chronological order.
+ | FR-098
+ | Allow guests to open an individual activity's detailed page.
+ | FR-099
+ | Display itinerary, menu, dress code, theme and additional instructions on the activity page when provided.
+ | FR-100
+ | Display activity dates, timings, venues and virtual meeting links where applicable.
+ | FR-101
+ | Display venue information and provide an option to open directions in Google Maps.
+ | FR-102
+ | Provide an RSVP section for assigned activities.
+ | FR-103
+ | Provide an announcements section.
+ | FR-104
+ | Provide a suggestions section.
+ | FR-105
+ | Provide relevant event instructions and organiser contact information.
+ | FR-106
+ | Provide access to the event photo gallery.
+ | FR-107
+ | Make the website responsive across mobile, tablet and desktop devices.
+ | FR-108
+ | Prevent unauthorised visitors from accessing private event information.
+ | 
+2.10 RSVP management
+ID
+ | Functional requirement
+ | FR-109
+ | Allow guests to RSVP through their personalised invitation link.
+ | FR-110
+ | Support RSVP statuses: Pending, Confirmed and Declined.
+ | FR-111
+ | Maintain RSVP responses separately for each activity.
+ | FR-112
+ | Allow guests to view their existing RSVP responses.
+ | FR-113
+ | Allow guests to update their RSVP before the applicable activity RSVP deadline.
+ | FR-114
+ | Prevent guests from submitting RSVP responses for activities to which they are not assigned.
+ | FR-115
+ | Allow administrators to view RSVP responses for each activity.
+ | FR-116
+ | Display RSVP counts and participation summaries to administrators.
+ | FR-117
+ | Send RSVP confirmation emails after guests submit or update their responses.
+ | FR-118
+ | Notify relevant administrators when guests submit RSVP responses.
+ | FR-119
+ | Allow administrators to configure RSVP deadlines for individual activities.
+ | 
+2.11 Guest suggestions and discussions
+ID
+ | Functional requirement
+ | FR-120
+ | Allow invited guests to submit suggestions related to an event.
+ | FR-121
+ | Associate suggestions with the parent event or a specific activity.
+ | FR-122
+ | Allow guests to provide a title and description for suggestions.
+ | FR-123
+ | Allow guests to report scheduling conflicts or propose alternative arrangements.
+ | FR-124
+ | Allow event owners and co-admins to view submitted suggestions.
+ | FR-125
+ | Allow administrators to respond to suggestions.
+ | FR-126
+ | Allow guests and administrators to exchange comments on suggestions.
+ | FR-127
+ | Support suggestion statuses: Open, Under Discussion, Accepted, Declined and Resolved.
+ | FR-128
+ | Notify guests when administrators respond to their suggestions.
+ | FR-129
+ | Maintain discussion history for each suggestion.
+ | FR-130
+ | Prevent suggestions from directly modifying published event information.
+ | FR-131
+ | Allow administrators to convert an agreed suggestion into a formal change proposal.
+ | 
+2.12 Event change proposals and unanimous approval
+ID
+ | Functional requirement
+ | FR-132
+ | Allow an owner or co-admin to create a change proposal for a published event.
+ | FR-133
+ | Support proposals affecting parent event details or individual activities.
+ | FR-134
+ | Support proposals for schedule changes, venue changes, participation changes, activity changes and event cancellation.
+ | FR-135
+ | Include description, proposed changes, proposer and creation timestamp in each proposal.
+ | FR-136
+ | Maintain a version number for each change proposal.
+ | FR-137
+ | Identify and record required approvers when a proposal is created.
+ | FR-138
+ | Allow each required approver to approve or raise an objection to a proposal.
+ | FR-139
+ | Do not automatically reject a proposal when one or more approvers disagree; unanimous approval is required for applicable operational changes to a Published event.
+ | FR-140
+ | Keep a proposal under discussion until all required approvers are aligned.
+ | FR-141
+ | Allow co-admins to discuss and suggest modifications to pending proposals.
+ | FR-142
+ | Allow the proposer to revise a proposal.
+ | FR-143
+ | Create a new proposal version on revision and invalidate approvals for the previous version.
+ | FR-144
+ | Publish proposed changes only after all required approvers approve the same proposal version.
+ | FR-145
+ | Apply approved changes to the relevant event or activity.
+ | FR-146
+ | Preserve the original required approver set for pending proposals.
+ | FR-147
+ | Allow a proposer to withdraw a proposal.
+ | FR-148
+ | Record withdrawn proposals separately from rejected proposals.
+ | FR-149
+ | Maintain approval, objection, revision and discussion history.
+ | FR-150
+ | Notify relevant co-admins when proposals are created, revised or approved.
+ | FR-151
+ | Notify relevant guests when approved changes affect their assigned activities.
+ | FR-152
+ | Require unanimous approval for cancellation of a published activity or parent event.
+ | FR-153
+ | Do not require unanimous approval for presentation-only changes, including cover image changes.
+ | 
+2.13 Announcements and notifications
+ID
+ | Functional requirement
+ | FR-154
+ | Allow owners and co-admins to publish announcements for an event.
+ | FR-155
+ | Allow announcements to target all invited guests or guests assigned to selected activities.
+ | FR-156
+ | Display relevant announcements on personalised guest websites.
+ | FR-157
+ | Send email notifications for important announcements.
+ | FR-158
+ | Notify guests about approved changes affecting their activities.
+ | FR-159
+ | Notify guests about RSVP confirmations and suggestion responses.
+ | FR-160
+ | Maintain notification delivery status where available.
+ | 
+2.14 Event photo gallery and management
+ID
+ | Functional requirement
+ | FR-161
+ | Provide a photo gallery for every event.
+ | FR-162
+ | Allow the event owner and co-admins to upload multiple photos directly to the event gallery.
+ | FR-163
+ | Allow administrators to associate photos with the parent event or a specific activity.
+ | FR-164
+ | Allow every invited guest of the parent event to browse approved photos, including photos associated with activities to which that guest is not assigned.
+ | FR-165
+ | Allow every invited guest to filter the event gallery by activity.
+ | FR-166
+ | Display relevant photo information, such as caption, uploader and upload date.
+ | FR-167
+ | Allow administrators to delete photos from the gallery.
+ | FR-168
+ | Allow administrators to enable or disable guest photo uploads for an event.
+ | FR-169
+ | Allow each invited guest to upload up to 20 photos per event, including through batch uploads, when guest uploads are enabled.
+ | FR-170
+ | Give all guest-uploaded photos a Pending Approval status initially.
+ | FR-171
+ | Keep guest-uploaded photos out of the published gallery until approved.
+ | FR-172
+ | Allow the event owner or co-admins to approve or reject pending photos.
+ | FR-173
+ | Notify guests when their uploaded photos are approved or rejected.
+ | FR-174
+ | Prevent guests from approving or rejecting their own uploaded photos.
+ | FR-175
+ | Validate uploaded photo formats and file sizes.
+ | FR-176
+ | Provide an expanded photo viewing experience, such as a lightbox.
+ | FR-177
+ | Ensure approved event photos are accessible to every invited guest of the parent event, subject to valid event access.
+ | FR-178
+ | Allow administrators to remove previously approved photos from the published gallery.
+ | 
+2.15 Event history
+ID
+ | Functional requirement
+ | FR-179
+ | Maintain an event history for registered users.
+ | FR-180
+ | Include a completed event in a user's history if the user has at least one Confirmed RSVP for an activity within that event.
+ | FR-181
+ | Exclude cancelled parent events from completed event history.
+ | FR-182
+ | Display the parent event once, rather than displaying each activity as a separate event.
+ | FR-183
+ | Display activities for which the user had confirmed RSVPs within the historical event.
+ | FR-184
+ | Allow users to view relevant details of historical events.
+ | FR-185
+ | Distinguish upcoming, ongoing and completed events.
+ | 
+2.16 External API integrations
+ID
+ | Functional requirement
+ | FR-186
+ | Support venue search and address suggestions through a mapping provider.
+ | FR-187
+ | Allow administrators to select venues from map search results.
+ | FR-188
+ | Store venue name, formatted address, coordinates and external place identifier where available.
+ | FR-189
+ | Provide guests with an option to open venue directions in Google Maps.
+ | FR-190
+ | Allow guests to export activities to their calendars using the `.ics` format.
+ | FR-191
+ | Preserve activity timezone information when generating calendar entries.
+ | FR-192
+ | Optionally integrate with a weather provider to display forecasts for outdoor activities.
+ | FR-193
+ | Allow administrators to add virtual meeting links to activities.
+ | FR-194
+ | Optionally support meeting-provider integrations to generate virtual meeting links in a future version.
+ | FR-195
+ | Use an email service to send invitations, RSVP confirmations and event notifications.
+ | FR-196
+ | Provide manual input alternatives when external APIs are unavailable.
+ | 
+2.17 Audit logs, security and privacy
+ID
+ | Functional requirement
+ | FR-197
+ | Record important event-management actions in an audit log.
+ | FR-198
+ | Record the user responsible for each administrative action.
+ | FR-199
+ | Record changes to event information, activities, guest assignments, cover images and approval proposals.
+ | FR-200
+ | Restrict access to private event information based on event membership and permissions.
+ | FR-201
+ | Prevent guests from viewing other guests' private contact information, including phone numbers and email addresses.
+ | FR-202
+ | Protect invitation tokens and guest sessions against unauthorised access.
+ | FR-203
+ | Invalidate guest sessions when the associated invitation is revoked or the guest is removed.
+ | FR-204
+ | Validate all incoming requests on the backend before modifying event data.
+ | FR-205
+ | Restrict access to private event photos using event-level authorisation.
+ | 
+2.18 Public-facing website and contact
+ID
+ | Functional requirement
+ | FR-206
+ | Provide a public landing page describing Gatherly.
+ | FR-207
+ | Describe the platform's key features and value proposition on the landing page.
+ | FR-208
+ | Provide a contact form for visitors.
+ | FR-209
+ | Deliver contact form submissions to the configured Gatherly mailbox.
+ | FR-210
+ | Validate contact form submissions and provide basic spam protection.
+ | 
+2.19 Optional AI capabilities
+ID
+ | Functional requirement
+ | FR-211
+ | Optionally generate event descriptions based on organiser input.
+ | FR-212
+ | Optionally suggest activity schedules based on event details.
+ | FR-213
+ | Optionally summarise guest suggestions and discussions for administrators.
+ | FR-214
+ | Optionally identify potential scheduling conflicts across activities.
+ | FR-215
+ | Optionally suggest alternative arrangements when conflicts are detected.
+ | FR-216
+ | Require administrator confirmation before AI-generated suggestions are applied to published event details.
+ | 
+2.20 Additional confirmed requirements and deferred capability
+ID
+ | Functional requirement
+ | FR-217
+ | Allow invited guests to download approved photos from the event gallery.
+ | FR-218
+ | Allow guests to continue accessing their personalised event website after the parent event has been completed, while their invitation access remains valid.
+ | FR-219
+ | Support an owner-selected custom event website link or URL slug, including availability validation. This capability is deferred until after core product features are implemented.
+ | FR-220
+ | User-created templates shall remain private to their creator and shall not be shareable with other Gatherly users.
+ | FR-221
+ | Co-admins shall be able to create and edit event and activity details while the event is in Draft without approval.
+ | 
+2.21 New requirements — initial publication approval
+ID
+ | Functional requirement
+ | FR-222
+ | Require unanimous approval from the event owner and every co-admin before an event can be initially published.
+ | FR-223
+ | Move an event into Pending Approval when an authorised administrator initiates publication.
+ | FR-224
+ | Record the required approvers as a fixed snapshot when a publication approval round is initiated.
+ | FR-225
+ | Allow each required approver to approve the specific event version submitted for publication.
+ | FR-226
+ | Keep the event unpublished and prevent guest invitations from being sent until all required approvers approve the same version.
+ | FR-227
+ | Allow an approver to request changes, returning the event to Draft for revision.
+ | FR-228
+ | Invalidate all approvals and start a new approval round if the event is edited while Pending Approval.
+ | FR-229
+ | Record publication approval decisions, approver identity, timestamps, event version and comments.
+ | FR-230
+ | Notify required approvers when publication approval is requested and notify relevant administrators when the event is published.
+ | 

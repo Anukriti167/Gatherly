@@ -1,0 +1,322 @@
+              ROUND 2 | BUILD-PHASE GUIDE
+
+GoDaddy Inclusive Innovation Hackathon 2026
+
+Your guide to the build phase for the 150 shortlisted participants
+
+Build phase: 13 to 20 November 2026
+GODADDY INCLUSIVE INNOVATION HACKATHON 2026
+
+Building with Claude
+
+Meet Claude, build well with it, and make your credits count.
+
+Aditi Rathi                                     Kickoff webinar
+Anthropic                                   13 November 2026
+
+Hosted by GoDaddy | Sponsored by Anthropic                                   1
+MEET CLAUDE
+
+One API, three models to build with
+
+Claude is the AI model your agent will run on. It can reason through a task, call your tools, read long
+documents and images, and return data your code can use.
+
+Fast and low cost               The everyday pick                                                 For the hard parts
+
+Claude Haiku 5.5                Claude Sonnet 5.5                                                 Claude Opus 5.5
+
+Use it for simple, high-volume  A strong balance of speed and                                     Use it for long, multi-step agent
+steps: sort, extract, route.    smarts for most of your build.                                    work and tricky coding.
+
+From $0.10 / $0.50              $2 / $10                                                          $4 / $20
+
+Prices are input / output, in USD per million tokens. Source: platform.claude.com/docs, Nov 2026                                     2
+BUILD WELL
+
+Six habits of strong Claude builds
+
+1  Start simple                               2  Be specific
+
+   Get one prompt working before you add         Tell Claude the goal, the user and what
+
+   more agents.                                  good looks like.
+
+3  Give Claude tools                          4  Ask for structure
+
+   Let Claude call your APIs instead of          Ask for JSON so your code can use the
+
+   guessing.                                     answer.
+
+5  Test on real cases                         6  Keep a person in control
+
+   Save 10 real cases. Rerun them after each     Have the agent confirm before it sends or
+
+   change.                                       spends.
+
+Hosted by GoDaddy | Sponsored by Anthropic                                                  3
+YOUR CREDITS
+
+Make your $100 go further
+
+$100                                 Claim on day one
+
+in Claude API credits, claimed into  One claim each. New accounts wait 24 hours.
+your Console
+                                     Match the model to the step
+13­20 Nov
+                                     Haiku for simple steps. Opus only when needed.
+claim window. After that the link
+closes                               Cache what you repeat
+
+90 days                              Prompt caching makes repeated prompts cheaper.
+
+to use your credits once you claim   Keep answers short
+them
+                                     Output costs 5x input. Set max_tokens.
+
+                                     Watch your spend, guard your link and key
+
+                                     Check usage daily. Don't share your link or key.
+
+On Claude Sonnet 5.5, $100 covers about 50 million input tokens or 10 million output tokens.  4
+GET STARTED
+
+Your first steps
+
+1                         2                    3                     4
+
+Create your account       Claim your credits   Create an API key     Make your first call
+
+Sign up free at           Open the link from   Open API keys in the  Install the SDK. Send
+platform.claude.com       HackerEarth. Claim   Claude Console. Keep  one message. Then
+(not claude.ai). No card  once, into your own  the key private.      shape and test your
+needed.                   Console account.                           prompt.
+
+New account? Credits land after 24 hours.                            Questions?
+Docs: platform.claude.com/docs
+                                                                                                             5
+Hosted by GoDaddy | Sponsored by Anthropic
+      ROUND 2 | BUILD PHASE                   $ gddy --help
+
+Welcome to Round 2                            $ gddy tree
+
+GoDaddy Inclusive Innovation Hackathon 2026   > build
+                                              > deploy
+Build phase: 13 to 20 November 2026           > own your domain
+                                              > launch
+A guide for the 150 shortlisted participants
+
+150 shortlisted | Top 10 advance
+     01 WELCOME
+
+You made it to Round 2
+
+150                                                                8                                 10
+
+participants shortlisted for Round 2                               days to build, 13 to 20 November  teams will be selected as the Top 10
+                                                                   2026
+
+Your mission
+
+Build your app, deploy it on GoDaddy, put it on your own domain, and set up email on
+that domain.
+
+You get the route, not turn-by-turn directions. Figuring out the details is part of the challenge.
+
+GoDaddy Inclusive Innovation Hackathon 2026 | Round 2 Build Phase                                                                          3
+  02 BUIL D OVER VIE W
+
+Four moves from idea to live
+
+          1                            2                                     3                             4
+
+Build your app               Host it on GoDaddy                    Use your domain               Set up domain email
+
+Create the app you want to   Pick one path: Node.js hosting        Search, buy and point a       Create a mailbox on your
+to ship. Make sure it meets  or a virtual server with              domain at your app. The site  domain and add a contact
+meets your hosting path's    Docker.                               site must load over HTTPS.    form that sends to it.
+requirements.                                                      HTTPS.
+
+Before you s tart: share your customer ID and hosting choice on the registration form, then wait for our confirmation before
+confirmation before buying anything.
+
+GoDaddy Inclusive Innovation Hackathon 2026 | Round 2 Build Phase                                                             4
+      03 TIMELINE
+
+Timeline and key deadlines
+
+1                       2                                          3                           4                         5
+
+9­14 Nov                13­20 Nov                                  13­20 Nov                   30 Nov                    11 Dec
+
+Register                Build phase                                Office hours                Top 10 announced          Onsite finale, Pune
+
+Share your customer ID  Build opens 13 Nov.                        Every day, 4:00 to 5:00     Results are announced     Top 10 are invited to
+and hosting choice on   Submissions close 20                       PM IST. Register using the  and the Top 10 finalists  present their prototypes
+the registration form.  Nov; submission time to                    office hours form.          are selected.             on site.
+Wait for credit         be confirmed.
+confirmation.
+
+   Registration form: https://forms.cloud.microsoft/r/dQpTXbHbFV?origin=lprLink  Office hours form: https://forms.cloud.microsoft/r/zbRpQKEYFf
+
+GoDaddy Inclusive Innovation Hackathon 2026 | Round 2 Build Phase                                                                                  5
+         04 CHALLENGE & SUBMISSION
+
+The challenge and what to submit
+
+                         CHALLENGE STATEMENT
+
+                Build agentic business solutions leveraging Claude and GoDaddy technologies to help
+                entrepreneurs, creators, and small businesses go from idea to launch.
+
+A live app on GoDaddy                Your own domain                   Email on your domain       A working contact form
+
+Deployed and published on            Bought on godaddy.com, with DNS   A mailbox such as          Messages from your site reach
+Node.js hosting or a Docker virtual  pointing at your app. Site loads  hello@yourdomain.com that  your mailbox. No passwords in
+server.                              over HTTPS.                       receives a test email.     code or repo.
+
+     Submit by 20 November 2026 via HackerEarth: live link, GitHub repository and project brief                                                           6
+
+GoDaddy Inclusive Innovation Hackathon 2026 | Round 2 Build Phase
+         05 BUILD INSTRUCTIONS
+
+Steps 1 to 3: account, credit and hosting
+
+    1 Set up your developer account                                3 Choose ONE hosting path and tell us on the form
+
+    · Sign up at developer.godaddy.com                                        Option A: Node.js hosting                  Option B: Docker VPS
+    · Install and authenticate the gddy CLI
+    · Run a first command to confirm it works                      · Deploy a zip with the gddy CLI, free to  · We add a 4 vCPU / 8 GB RAM server
+    · No payment method needed                                        start                                      to your cart for $0
+
+    2 Get your GoDaddy credit                                      · Open the preview URL while logged in     · Check out and set up your server
+                                                                   · Go live: Economy plan, term set to 1     · Generate an SSH key, install it on the
+    · Find your customer ID on godaddy.com (click your
+       name, top right)                                               month (not 36); credit takes the cart      server and connect
+                                                                      to $0                                   · Package your app with Docker and
+    · Share it via the registration form                           · Publish with the CLI
+    · Wait for our confirmation before you buy anything            · Read the app requirements before            run it on the server
+    · Buy on godaddy.com; use the CLI to explore and                  zipping
+
+       manage                                                                                                                                           7
+
+GoDaddy Inclusive Innovation Hackathon 2026 | Round 2 Build Phase
+   05 BUIL D I NSTRUCT I ONS
+
+Steps 4 and 5: your domain and your email
+
+           4 Put it on your own domain                                        5 Get email on your domain
+
+· Use the gddy CLI to search domain names and compare              · Buy Titan Business Email, Pro Light plan, term set to 1 month
+  prices                                                             month
+
+· Buy your domain on godaddy.com with your in-store credit         · Create a mailbox with the CLI, such as
+· Point the domain at your app; manage DNS with the CLI              hello@yourdomain.com
+· Make sure your site loads over HTTPS
+                                                                   · Send a test email from another account and confirm it arrives
+                                                                   · Add a contact form that sends to this mailbox; keep the
+
+                                                                     password out of your code and repo
+
+SMTP tip: if the mailbox login is rejected, try smtpout.secureserver.net instead of smtp.titan.email. Use the full email address as the
+address as the username.
+
+GoDaddy Inclusive Innovation Hackathon 2026 | Round 2 Build Phase                                                                        8
+   06 TOOL S, CRED IT S & SUPPORT
+
+What you have to work with
+
+         Tools                                                              Credits                                    Support
+
+· gddy CLI: explore and manage domains,                            · GoDaddy in-store credit, applied at      · Run gddy --help and gddy tree to see
+   domains, DNS, hosting and mailboxes                                checkout on godaddy.com                    everything the CLI can do
+   mailboxes
+                                                                   · No payment method needed                 · Still stuck? Ask the organizers
+· developer.godaddy.com: sign-up and                               · Node.js Economy plan and Titan Pro
+   docs                                                                                                        O ffic e ho urs : 13 to 20 N o v, every
+                                                                      Light, both at 1 month, should come to   4:00 to 5 :00 PM IS T.
+· godaddy.com: where you make                                         $0
+   purchases                                                       · Docker VPS (4 vCPU / 8 GB) added to       https://forms.cloud.microsoft/r/zbRpQKEYFf
+                                                                      your cart for $0
+· Node.js app requirements guide
+
+GoDaddy Inclusive Innovation Hackathon 2026 | Round 2 Build Phase                                                                                          9
+  07 EVALUATION
+
+Evaluation criteria and scoring rubric
+
+C riterio n   W hat judg es lo ok for                                         We ig ht
+
+Im p act      Re al- world po tential o f the solutio n, who b enefits , and  35%
+Demo          whether it could be co m e so m ething pe ople use.
+Tech U sag e
+Exec ution    Q uality and functio nality of the working d em o and ho w      35%       One rubric for every team
+              effectively it dem o nstrates the prop ose d im pact.
+Total                                                                                   Scores decide which 10 of the 150
+              H ow creativ ely and m eaning fully C laude and Go D ad dy      15%       advance. Check your build against
+              te chnolog y have bee n use d b eyo nd a basic integ ration.              every criterion before you submit.
+                                                                                        Top 10 finalists are announced on 30
+              C od e quality, des ig n p atterns, security p atterns and      15%       November and invited to present
+              related eng inee ring practices.                                100%      their prototypes at the onsite finale
+                                                                                        in Pune on 11 December.
+GoDaddy Inclusive Innovation Hackathon 2026 | Round 2 Build Phase
+                                                                                                                                                        10
+   08 TOP 10 SHO RT LIS TING
+
+How 150 become the Top 10
+
+150                     20 Nov                                     Rubric                     10
+
+Participants build      Submissions close                          Every team is scored       Top 10 selected
+
+13 to 20 November 2026  Live link, GitHub repo and                 Impact, Demo, Tech Usage,  Highest scores advance
+                        project brief via HackerEarth              Execution
+
+    Announcement                                                   What the Top 10 do next
+
+    30 November 2026                                               Invited to present your prototype at the onsite finale in Pune on 11
+                                                                   Pune on 11 December 2026.
+GoDaddy Inclusive Innovation Hackathon 2026 | Round 2 Build Phase
+                                                                                                                                                                                         11
+  09 CHECKL IST
+
+Final submission checklist
+
+Developer account created and gddy CLI working                     Site loads over HTTPS
+working
+
+Customer ID and hosting choice submitted                           Mailbox created and test email received
+
+App deployed and published on your chosen hosting                  Contact form sends messages to your mailbox
+hosting path
+                                                                   Mailbox password kept out of your code and repo
+Own domain bought and pointed at your app                          repo
+
+Submit by 20 November 2026, via HackerEarth: live link, GitHub repository and project brief
+
+GoDaddy Inclusive Innovation Hackathon 2026 | Round 2 Build Phase                                                   12
+        10 QUESTIONS & NEXT STEPS
+
+Questions and next steps
+
+   Register
+
+1  Submit your customer ID and hosting choice on the registration form, 9
+
+   to 14 November.
+
+   Wait for confirmation                                                     Questions?
+
+2  Your credit is added by the organizers. Do not buy anything before then.  Use gddy --help and gddy tree first, then ask the
+                                                                             organizers.
+   Build and submit
+                                                                             Contact: For registrations & any other support
+3  Deploy, add your domain and email, and submit by 20 November 2026         Registration form:
+                                                                             https://forms.cloud.microsoft/r/dQpTXbHbFV?origin=lpr
+   November 2026 via HackerEarth.                                            Link
+                                                                             O ffic e h o urs fo rm:
+                                                                             https://forms.cloud.microsoft/r/zbRpQKEYFf
+
+GoDaddy Inclusive Innovation Hackathon 2026 | Round 2 Build Phase                                                                   13
+
