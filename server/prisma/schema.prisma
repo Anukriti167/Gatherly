@@ -15,7 +15,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -24,7 +24,7 @@ datasource db {
 
 model User {
   id              String    @id @default(cuid())
-  email           String    @unique // stored normalised (trimmed, lower-case)
+  email           String    @unique @db.VarChar(254) // stored normalised (trimmed, lower-case)
   name            String
   passwordHash    String
   phone           String? // FR-005
@@ -63,7 +63,7 @@ model UserSession {
   expiresAt  DateTime
   revokedAt  DateTime?
   ipAddress  String?
-  userAgent  String?
+  userAgent  String?   @db.VarChar(512)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -129,7 +129,7 @@ enum PlanningPath {
 model Event {
   id              String        @id @default(cuid())
   name            String
-  description     String        @default("")
+  description     String        @db.Text /// required; the app sends "" when empty (MySQL TEXT columns cannot have a default)
   eventType       EventType
   customTypeLabel String? // e.g. "Housewarming" when eventType = OTHER
   planningPath    PlanningPath? // FR-047 (optional)
@@ -145,9 +145,9 @@ model Event {
   coverLibraryKey String?
 
   // Guest-facing extras (FR-105)
-  instructions          String?
+  instructions          String? @db.Text
   organiserContactName  String?
-  organiserContactEmail String?
+  organiserContactEmail String? @db.VarChar(254)
   organiserContactPhone String?
 
   guestUploadsEnabled Boolean @default(false) // FR-168
@@ -225,7 +225,7 @@ model Activity {
   id          String         @id @default(cuid())
   eventId     String
   name        String
-  description String         @default("")
+  description String         @db.Text /// required; the app sends "" when empty (MySQL TEXT columns cannot have a default)
   status      ActivityStatus @default(SCHEDULED)
   startsAt    DateTime
   endsAt      DateTime
@@ -233,12 +233,12 @@ model Activity {
   sortOrder   Int            @default(0)
 
   // Venue (FR-021, FR-186 – FR-188). Entered manually; place id kept for a future provider.
-  venueName         String?
-  venueAddress      String?
+  venueName         String? @db.VarChar(200)
+  venueAddress      String? @db.VarChar(500)
   venueLatitude     Float?
   venueLongitude    Float?
   venuePlaceId      String?
-  virtualMeetingUrl String? // FR-193
+  virtualMeetingUrl String? @db.Text // FR-193
 
   capacity     Int? // FR-022
   rsvpDeadline DateTime? // FR-119
@@ -246,10 +246,10 @@ model Activity {
   coverAssetId    String? // FR-042 (falls back to the event cover, FR-043)
   coverLibraryKey String?
 
-  dressCode        String? // FR-032
-  themeDescription String? // FR-033
+  dressCode        String? @db.Text // FR-032
+  themeDescription String? @db.Text // FR-033
   themeColors      Json? // FR-033 — array of hex colours
-  instructions     String? // FR-034
+  instructions     String? @db.Text // FR-034
 
   // FR-035: optional sections can be hidden from guests when irrelevant.
   showPeople       Boolean @default(true)
@@ -288,7 +288,7 @@ model ActivityPerson {
   role       ActivityPersonRole
   name       String
   title      String? // e.g. "Keynote", "DJ", "Best man"
-  bio        String?
+  bio        String?            @db.Text
   sortOrder  Int                @default(0)
 
   activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
@@ -300,8 +300,8 @@ model ActivityPerson {
 model ItineraryItem {
   id          String    @id @default(cuid())
   activityId  String
-  title       String
-  description String?
+  title       String    @db.VarChar(200)
+  description String?   @db.Text
   startsAt    DateTime
   endsAt      DateTime?
   position    Int       @default(0)
@@ -329,7 +329,7 @@ model MenuItem {
   id          String  @id @default(cuid())
   categoryId  String
   name        String
-  description String?
+  description String? @db.VarChar(500)
   dietaryTags Json?
   position    Int     @default(0)
 
@@ -422,7 +422,7 @@ model ApprovalRound {
   /// The exact event version being approved (FR-225).
   eventVersion  Int
   initiatedById String
-  reason        String? // e.g. "submitted", "event edited while pending"
+  reason        String?             @db.Text // e.g. "submitted", "event edited while pending"
   createdAt     DateTime            @default(now())
   closedAt      DateTime?
 
@@ -452,7 +452,7 @@ model ApprovalDecision {
   approverId   String
   decision     ApprovalDecisionType
   eventVersion Int
-  comment      String?
+  comment      String?              @db.Text
   createdAt    DateTime             @default(now())
 
   round    ApprovalRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
@@ -471,7 +471,7 @@ model Guest {
   id            String    @id @default(cuid())
   eventId       String
   name          String
-  email         String // normalised; unique per event among non-removed guests (FR-071, migration SQL)
+  email         String    @db.VarChar(254) // normalised; unique per event among non-removed guests (FR-071, migration SQL)
   phone         String? // FR-073 — visible to organisers only (FR-082)
   /// FR-077 — invited to every activity, including ones added later.
   allActivities Boolean   @default(false)
@@ -526,7 +526,7 @@ model ChangeProposal {
   title        String
   /// Current revision number; approvals only count for this version (FR-136, FR-143).
   version      Int            @default(1)
-  closedReason String?
+  closedReason String?        @db.Text
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   closedAt     DateTime?
@@ -546,7 +546,7 @@ model ProposalRevision {
   id          String   @id @default(cuid())
   proposalId  String
   version     Int
-  description String
+  description String   @db.Text
   changes     Json
   createdById String
   createdAt   DateTime @default(now())
@@ -575,7 +575,7 @@ model ProposalDecision {
   approverId      String
   decision        ProposalDecisionType
   proposalVersion Int
-  comment         String?
+  comment         String?              @db.Text
   createdAt       DateTime             @default(now())
 
   proposal ChangeProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
@@ -589,7 +589,7 @@ model ProposalComment {
   id         String   @id @default(cuid())
   proposalId String
   authorId   String
-  body       String
+  body       String   @db.Text
   createdAt  DateTime @default(now())
 
   proposal ChangeProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
@@ -608,10 +608,10 @@ model Notification {
   eventId   String?
   /// e.g. "proposal.created", "publication.requested", "guests.changed"
   kind      String
-  title     String
-  body      String
+  title     String    @db.VarChar(200)
+  body      String    @db.Text
   /// In-app path to open, e.g. /events/abc#proposal-xyz
-  url       String
+  url       String    @db.VarChar(500)
   createdAt DateTime  @default(now())
   readAt    DateTime?
 
@@ -686,14 +686,14 @@ enum EmailStatus {
 model EmailOutbox {
   id            String      @id @default(cuid())
   kind          String // e.g. "invitation", "rsvp.confirmation"
-  toEmail       String
+  toEmail       String      @db.VarChar(254)
   toName        String?
-  subject       String
-  text          String
-  html          String
+  subject       String      @db.Text
+  text          String      @db.MediumText
+  html          String      @db.MediumText
   status        EmailStatus @default(QUEUED)
   attempts      Int         @default(0)
-  lastError     String?
+  lastError     String?     @db.Text
   nextAttemptAt DateTime    @default(now())
   sentAt        DateTime?
   eventId       String?
@@ -755,13 +755,13 @@ model Photo {
   sizeBytes         Int
   width             Int?
   height            Int?
-  caption           String?
+  caption           String?     @db.VarChar(300)
   status            PhotoStatus
   uploadedByUserId  String?
   uploadedByGuestId String?
   reviewedById      String?
   reviewedAt        DateTime?
-  rejectionReason   String?
+  rejectionReason   String?     @db.VarChar(300)
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
@@ -772,4 +772,13 @@ model Photo {
 
   @@index([eventId, status, createdAt])
   @@index([uploadedByGuestId, status])
+}
+
+// Uploaded file contents (photos, documents) — kept in the database so they survive redeploys on
+// managed hosting and stay private (served only through access-checked routes).
+model StoredFile {
+  key       String   @id @db.VarChar(255)
+  data      Bytes    @db.LongBlob
+  sizeBytes Int
+  createdAt DateTime @default(now())
 }

@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import pg from 'pg';
+import mariadb from 'mariadb';
 import { loadDotEnv } from '../src/config/env.ts';
 
 /**
@@ -19,15 +19,17 @@ export default async function setup(): Promise<void> {
   const dbName = decodeURIComponent(target.pathname.slice(1));
   if (!/^[A-Za-z0-9_]+$/.test(dbName)) throw new Error(`Unsafe test database name: ${dbName}`);
 
-  const admin = new URL(url);
-  admin.pathname = '/postgres';
-  const client = new pg.Client({ connectionString: admin.toString() });
-  await client.connect();
+  const conn = await mariadb.createConnection({
+    host: target.hostname,
+    port: Number(target.port || 3306),
+    user: decodeURIComponent(target.username),
+    password: decodeURIComponent(target.password),
+    allowPublicKeyRetrieval: true,
+  });
   try {
-    const exists = await client.query('SELECT 1 FROM pg_database WHERE datname = $1', [dbName]);
-    if (exists.rowCount === 0) await client.query(`CREATE DATABASE "${dbName}"`);
+    await conn.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
   } finally {
-    await client.end();
+    await conn.end();
   }
 
   execSync('npx prisma migrate deploy', {

@@ -12,7 +12,13 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   APP_ORIGIN: z.url().default('http://localhost:5173'),
-  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+  DATABASE_URL: z.preprocess(emptyToUndefined, z.string().optional()),
+  // GoDaddy managed MySQL provides these instead of a URL (deploy contract C12).
+  DB_HOST: z.preprocess(emptyToUndefined, z.string().optional()),
+  DB_PORT: z.preprocess(emptyToUndefined, z.string().optional()),
+  DB_NAME: z.preprocess(emptyToUndefined, z.string().optional()),
+  DB_USER: z.preprocess(emptyToUndefined, z.string().optional()),
+  DB_PASSWORD: z.preprocess(emptyToUndefined, z.string().optional()),
   TRUST_PROXY: z
     .string()
     .default('false')
@@ -79,6 +85,14 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
   const e = parsed.data;
+  const databaseUrl =
+    e.DATABASE_URL ??
+    (e.DB_HOST && e.DB_NAME && e.DB_USER
+      ? `mysql://${encodeURIComponent(e.DB_USER)}:${encodeURIComponent(e.DB_PASSWORD ?? '')}@${e.DB_HOST}:${e.DB_PORT ?? '3306'}/${e.DB_NAME}`
+      : undefined);
+  if (!databaseUrl) {
+    throw new Error('Invalid environment configuration:\n  - DATABASE_URL (or DB_HOST, DB_NAME, DB_USER, DB_PASSWORD) is required');
+  }
   const isProduction = e.NODE_ENV === 'production';
   const secureCookie = e.APP_ORIGIN.startsWith('https://');
 
@@ -92,7 +106,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
     port: e.PORT,
     logLevel: e.LOG_LEVEL,
     appOrigin: e.APP_ORIGIN.replace(/\/$/, ''),
-    databaseUrl: e.DATABASE_URL,
+    databaseUrl,
     trustProxy: e.TRUST_PROXY,
     rateLimitEnabled: e.RATE_LIMIT_ENABLED,
     emailRatePerMinute: e.EMAIL_RATE_PER_MINUTE,

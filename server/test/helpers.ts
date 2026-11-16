@@ -28,13 +28,16 @@ export function createTestContext() {
   return { config, prisma, mailer, app };
 }
 
-/** Empties every table (fast, keeps the schema). */
+/** Empties every table (keeps the schema). One connection, so the FK-check switch applies to it. */
 export async function resetDatabase(prisma: PrismaClient): Promise<void> {
-  const rows = await prisma.$queryRaw<{ tablename: string }[]>`
-    SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`;
-  if (rows.length === 0) return;
-  const tables = rows.map((r) => `"public"."${r.tablename}"`).join(', ');
-  await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tables} RESTART IDENTITY CASCADE`);
+  await prisma.$transaction(async (tx) => {
+    const rows = await tx.$queryRawUnsafe<{ name: string }[]>(
+      "SELECT table_name AS name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE' AND table_name <> '_prisma_migrations'",
+    );
+    await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 0');
+    for (const { name } of rows) await tx.$executeRawUnsafe('DELETE FROM `' + name + '`');
+    await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 1');
+  });
 }
 
 /** A cookie-keeping client that sends the Origin header like a browser on our site. */

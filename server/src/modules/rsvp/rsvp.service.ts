@@ -46,7 +46,8 @@ export class RsvpService {
 
     const previous = await this.prisma.$transaction(async (tx) => {
       // Lock the activity row so two guests can't both take the last seat (FR-022).
-      await tx.$queryRaw`SELECT id FROM "Activity" WHERE id = ${activityId} FOR UPDATE`;
+      // Row lock (MySQL/InnoDB). Unquoted name: backticks would end this template literal; the exact case matches the table.
+      await tx.$queryRaw`SELECT id FROM Activity WHERE id = ${activityId} FOR UPDATE`;
       const before = await tx.rsvp.findUnique({ where: { guestId_activityId: { guestId: guest.id, activityId } } });
       if (before?.status === status) return before.status;
 

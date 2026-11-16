@@ -237,8 +237,12 @@ export class GuestsService {
       const assignmentOf = (r: ImportRowResult) =>
         r.invitedTo ? { all: r.invitedTo.all, ids: r.invitedTo.activityIds } : { all: opts.allActivities, ids: opts.activityIds };
       if (toAdd.length) {
-        const created = await tx.guest.createManyAndReturn({
+        // MySQL has no INSERT … RETURNING: insert, then read back the new rows by email.
+        await tx.guest.createMany({
           data: toAdd.map((r) => ({ eventId, name: r.name, email: r.email, phone: r.phone, allActivities: assignmentOf(r).all, createdById: userId })),
+        });
+        const created = await tx.guest.findMany({
+          where: { eventId, removedAt: null, email: { in: toAdd.map((r) => r.email) } },
           select: { id: true, email: true },
         });
         const idByEmail = new Map(created.map((g) => [g.email, g.id]));
