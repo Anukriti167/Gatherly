@@ -333,22 +333,36 @@ export function GuestsSection({ event }: { event: EventDetail }) {
       )}
 
       {guests && guests.length > 5 && (
-        <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_16rem]">
-          <input
-            type="search"
-            aria-label="Search guests"
-            placeholder="Search by name or email…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-          />
-          <SelectField
-            label="Activity"
-            name="activityFilter"
-            value={activityFilter}
-            options={[{ value: '', label: 'All activities' }, ...activities.map((a) => ({ value: a.id, label: a.name }))]}
-            onChange={(e) => setActivityFilter(e.target.value)}
-          />
+        // Activity filtering is done by the chips above; this is a single, full-width search.
+        <div className="mt-4">
+          <div className="relative">
+            <svg aria-hidden viewBox="0 0 20 20" fill="currentColor" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400">
+              <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 3.47 9.77l3.13 3.13a.75.75 0 1 0 1.06-1.06l-3.13-3.13A5.5 5.5 0 0 0 9 3.5ZM5 9a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" clipRule="evenodd" />
+            </svg>
+            <input
+              type="search"
+              aria-label="Search guests"
+              placeholder="Search guests by name or email…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="block w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-9 pr-9 text-sm shadow-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 [&::-webkit-search-cancel-button]:hidden"
+            />
+            {query && (
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => setQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          {(query || activityFilter) && (
+            <p className="mt-2 text-xs text-slate-500" role="status">
+              Showing {visible.length} of {guests.length} guests
+            </p>
+          )}
         </div>
       )}
 
