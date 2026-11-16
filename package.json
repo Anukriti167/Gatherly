@@ -13,13 +13,12 @@
   },
   "scripts": {
     "dev": "concurrently -n server,client -c blue,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
-    "build": "npm run build -w client && npm run build -w server && npm run db:deploy",
+    "build": "npm run build -w client && npm run build -w server",
     "start": "npm run start -w server",
     "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w client",
     "test": "npm run test -w server",
     "db:migrate": "npm run db:migrate -w server",
-    "db:generate": "npm run db:generate -w server",
-    "db:deploy": "npm run db:deploy -w server"
+    "db:generate": "npm run db:generate -w server"
   },
   "devDependencies": {
     "concurrently": "^9.0.0",
