@@ -164,6 +164,7 @@ export class ActivitiesService {
         data: {
           ...data,
           name: input.name,
+          description: input.description ?? '',
           eventId,
           ...times,
           themeColors: input.themeColors ?? undefined,

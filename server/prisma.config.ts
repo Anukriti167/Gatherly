@@ -1,8 +1,17 @@
 import { existsSync } from 'node:fs';
 import { defineConfig } from 'prisma/config';
 
-// Load server/.env for CLI commands (migrate, studio). Existing env vars take precedence.
+// Load server/.env for local CLI commands.
+// Existing environment variables take precedence.
 if (existsSync('.env')) process.loadEnvFile('.env');
+
+const databaseUrl =
+  process.env['DATABASE_URL'] ??
+  (process.env['DB_HOST'] &&
+  process.env['DB_NAME'] &&
+  process.env['DB_USER']
+    ? `mysql://${encodeURIComponent(process.env['DB_USER'])}:${encodeURIComponent(process.env['DB_PASSWORD'] ?? '')}@${process.env['DB_HOST']}:${process.env['DB_PORT'] ?? '3306'}/${process.env['DB_NAME']}`
+    : undefined);
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',
@@ -10,6 +19,10 @@ export default defineConfig({
     path: 'prisma/migrations',
   },
   datasource: {
-    url: process.env['DATABASE_URL'] ?? '',
+    url:
+      databaseUrl ??
+      (() => {
+        throw new Error('Database configuration is missing');
+      })(),
   },
 });
