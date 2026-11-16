@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch-path=src --watch-path=../shared/src --import tsx src/index.ts",
-    "build": "tsup",
+    "build": "npm run db:generate && tsup",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -28,6 +28,8 @@
     "nodemailer": "^10.5.0",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
+    "prisma": "^7.10.1",
+    "tsup": "^9.0.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -38,9 +40,7 @@
     "@types/nodemailer": "^8.0.2",
     "@types/supertest": "^7.2.1",
     "pino-pretty": "^13.2.0",
-    "prisma": "^7.10.1",
     "supertest": "^7.3.2",
-    "tsup": "^9.0.0",
     "tsx": "^4.23.15",
     "vitest": "^5.1.0"
   }
