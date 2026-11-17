@@ -42,58 +42,120 @@ export class OutboxService {
 
   /** Sends what's due, within the per-minute rate limit. Safe to call repeatedly. */
   async processBatch(now: Date = new Date()): Promise<{ sent: number; failed: number }> {
-    const sentLastMinute = await this.prisma.emailOutbox.count({ where: { status: 'SENT', sentAt: { gt: new Date(now.getTime() - 60_000) } } });
+    const sentLastMinute = await this.prisma.emailOutbox.count({
+      where: {
+        status: 'SENT',
+        sentAt: { gt: new Date(now.getTime() - 60_000) },
+      },
+    });
+
     const budget = Math.max(0, this.ratePerMinute - sentLastMinute);
     if (budget === 0) return { sent: 0, failed: 0 };
 
     const due = await this.prisma.emailOutbox.findMany({
-      where: { status: 'QUEUED', nextAttemptAt: { lte: now } },
+      where: {
+        status: 'QUEUED',
+        nextAttemptAt: { lte: now },
+      },
       orderBy: { createdAt: 'asc' },
       take: budget,
     });
 
     let sent = 0;
     let failed = 0;
+
     for (const job of due) {
       // Claim the job so two workers can't send it twice.
-      const claimed = await this.prisma.emailOutbox.updateMany({ where: { id: job.id, status: 'QUEUED' }, data: { status: 'SENDING' } });
+      const claimed = await this.prisma.emailOutbox.updateMany({
+        where: { id: job.id, status: 'QUEUED' },
+        data: { status: 'SENDING' },
+      });
+
       if (claimed.count !== 1) continue;
+
       try {
-        await this.mailer.send({ to: job.toEmail, subject: job.subject, text: job.text, html: job.html });
-        await this.prisma.emailOutbox.update({ where: { id: job.id }, data: { status: 'SENT', sentAt: new Date(), attempts: { increment: 1 }, lastError: null } });
+        await this.mailer.send({
+          to: job.toEmail,
+          subject: job.subject,
+          text: job.text,
+          html: job.html,
+        });
+
+        await this.prisma.emailOutbox.update({
+          where: { id: job.id },
+          data: {
+            status: 'SENT',
+            sentAt: new Date(),
+            attempts: { increment: 1 },
+            lastError: null,
+          },
+        });
+
         sent += 1;
       } catch (err) {
         const attempts = job.attempts + 1;
         const giveUp = attempts >= MAX_ATTEMPTS;
+        const errorMessage = err instanceof Error ? err.message : String(err);
+
         await this.prisma.emailOutbox.update({
           where: { id: job.id },
           data: {
             status: giveUp ? 'FAILED' : 'QUEUED',
             attempts,
-            lastError: (err instanceof Error ? err.message : String(err)).slice(0, 500),
-            nextAttemptAt: new Date(now.getTime() + (BACKOFF_MS[attempts - 1] ?? BACKOFF_MS.at(-1)!)),
+            lastError: errorMessage.slice(0, 500),
+            nextAttemptAt: new Date(
+              now.getTime() + (BACKOFF_MS[attempts - 1] ?? BACKOFF_MS.at(-1)!),
+            ),
           },
         });
+
         failed += 1;
-        this.logger.warn({ jobId: job.id, attempts, giveUp }, 'outbox.send_failed');
+
+        // Diagnostic logging: exposes the gateway error without logging email content or tokens.
+        this.logger.warn(
+          {
+            jobId: job.id,
+            toEmail: job.toEmail,
+            attempts,
+            giveUp,
+            error: errorMessage,
+          },
+          'outbox.send_failed',
+        );
       }
     }
+
     return { sent, failed };
   }
 
   /** Puts a failed email back in the queue (organiser "retry"). */
   async retry(id: string): Promise<void> {
-    await this.prisma.emailOutbox.updateMany({ where: { id, status: 'FAILED' }, data: { status: 'QUEUED', attempts: 0, nextAttemptAt: new Date() } });
+    await this.prisma.emailOutbox.updateMany({
+      where: { id, status: 'FAILED' },
+      data: {
+        status: 'QUEUED',
+        attempts: 0,
+        nextAttemptAt: new Date(),
+      },
+    });
   }
 
   /** Background worker — not used in tests, which call processBatch() directly. */
   start(intervalMs = 5_000): () => void {
     // Anything stuck in SENDING from a crash is safe to retry.
-    void this.prisma.emailOutbox.updateMany({ where: { status: 'SENDING' }, data: { status: 'QUEUED' } }).catch(() => undefined);
+    void this.prisma.emailOutbox
+      .updateMany({
+        where: { status: 'SENDING' },
+        data: { status: 'QUEUED' },
+      })
+      .catch(() => undefined);
+
     let running = false;
+
     const tick = async () => {
       if (running) return;
       running = true;
+
       try {
         await this.processBatch();
       } catch (err) {
@@ -102,9 +164,12 @@ export class OutboxService {
         running = false;
       }
     };
+
     const timer = setInterval(() => void tick(), intervalMs);
     timer.unref();
+
     void tick();
+
     return () => clearInterval(timer);
   }
 }
