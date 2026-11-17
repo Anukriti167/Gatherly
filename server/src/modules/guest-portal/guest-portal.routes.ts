@@ -65,6 +65,25 @@ export function guestPortalRoutes(access: GuestAccessService, rsvp: RsvpService,
     res.json({ view: await access.view(req.guest!) });
   });
 
+  /**
+   * Microsite homepage. The service scopes the slug to the guest's own event and
+   * returns only activities assigned to this guest (or all activities when enabled).
+   */
+  router.get('/events/:eventSlug', requireGuest, async (req, res) => {
+    const eventSlug = z.string().min(1).max(191).parse(req.params['eventSlug']);
+    res.json({ view: await access.viewByEventSlug(req.guest!, eventSlug) });
+  });
+
+  /**
+   * Individual activity page. The service checks both the event slug and the
+   * guest's activity assignment; a guessed URL never grants access.
+   */
+  router.get('/events/:eventSlug/activities/:activitySlug', requireGuest, async (req, res) => {
+    const eventSlug = z.string().min(1).max(191).parse(req.params['eventSlug']);
+    const activitySlug = z.string().min(1).max(191).parse(req.params['activitySlug']);
+    res.json(await access.activityBySlug(req.guest!, eventSlug, activitySlug));
+  });
+
   /** FR-109 – FR-114 — answer for one of your activities; returns the refreshed page data. */
   router.put('/rsvps/:activityId', requireGuest, validateBody(rsvpSchema), async (req, res) => {
     const activityId = z.string().min(1).max(64).parse(req.params['activityId']);

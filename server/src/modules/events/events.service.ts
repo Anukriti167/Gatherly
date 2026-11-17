@@ -15,6 +15,7 @@ import { AppError, badRequest, forbidden, notFound } from '../../lib/errors.ts';
 import type { PrismaClient, db } from '../../lib/prisma.ts';
 import type { AuditService } from '../audit/audit.service.ts';
 import { restartRoundAfterEdit } from '../publication/approval-rounds.ts';
+import { uniqueEventSlug } from '../../lib/slug.ts';
 
 type EventRow = db.Event;
 
@@ -28,6 +29,7 @@ export function toUtc(local: string, timezone: string, field: string): Date {
 function toSummary(event: EventRow, role: MembershipRole | 'GUEST'): EventSummary {
   return {
     id: event.id,
+    slug: event.slug,
     name: event.name,
     eventType: event.eventType,
     customTypeLabel: event.customTypeLabel,
@@ -116,8 +118,10 @@ export class EventsService {
     if (endsAt <= startsAt) throw badRequest('Please check the highlighted fields', { endsAt: ['End must be after the start'] });
 
     const event = await this.prisma.$transaction(async (tx) => {
+      const slug = await uniqueEventSlug(tx, input.name);
       const created = await tx.event.create({
         data: {
+          slug,
           name: input.name,
           description: input.description ?? '',
           eventType: input.eventType,

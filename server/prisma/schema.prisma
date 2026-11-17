@@ -128,6 +128,7 @@ enum PlanningPath {
 
 model Event {
   id              String        @id @default(cuid())
+  slug            String?       @unique @db.VarChar(191) // Backfilled before becoming required
   name            String
   description     String        @db.Text /// required; the app sends "" when empty (MySQL TEXT columns cannot have a default)
   eventType       EventType
@@ -224,6 +225,7 @@ enum ActivityStatus {
 model Activity {
   id          String         @id @default(cuid())
   eventId     String
+  slug        String?        @db.VarChar(191) // Unique within its parent event; backfilled before becoming required
   name        String
   description String         @db.Text /// required; the app sends "" when empty (MySQL TEXT columns cannot have a default)
   status      ActivityStatus @default(SCHEDULED)
@@ -272,6 +274,7 @@ model Activity {
   rsvps            Rsvp[]
   photos           Photo[]
 
+  @@unique([eventId, slug])
   @@index([eventId, startsAt])
 }
 

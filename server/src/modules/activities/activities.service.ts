@@ -9,6 +9,7 @@ import { badRequest, notFound } from '../../lib/errors.ts';
 import type { PrismaClient, db } from '../../lib/prisma.ts';
 import type { AuditService } from '../audit/audit.service.ts';
 import { diffFields, toUtc, type EventsService } from '../events/events.service.ts';
+import { uniqueActivitySlug } from '../../lib/slug.ts';
 
 /** Children loaded with every activity, already in display order. */
 const withChildren = {
@@ -34,6 +35,7 @@ export function toActivityDetail(a: ActivityRow): ActivityDetail {
   return {
     id: a.id,
     eventId: a.eventId,
+    slug: a.slug,
     name: a.name,
     description: a.description,
     status: a.status,
@@ -160,9 +162,11 @@ export class ActivitiesService {
     return this.events.runEdit(eventId, userId, expectedVersion, async (tx) => {
       const last = await tx.activity.aggregate({ where: { eventId }, _max: { sortOrder: true } });
       const data = this.pickPlain(input);
+      const slug = await uniqueActivitySlug(tx, eventId, input.name);
       const created = await tx.activity.create({
         data: {
           ...data,
+          slug,
           name: input.name,
           description: input.description ?? '',
           eventId,

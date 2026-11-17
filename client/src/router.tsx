@@ -9,6 +9,7 @@ import { VerifyEmailPage } from './pages/auth/VerifyEmailPage';
 import { CreateEventPage } from './pages/events/CreateEventPage';
 import { EventPage } from './pages/events/EventPage';
 import { GuestEventPage } from './pages/guest/GuestEventPage';
+import { GuestActivityMicrositePage, GuestEventMicrositePage } from './pages/guest/GuestMicrositePage';
 import { InvitationLandingPage } from './pages/guest/InvitationLandingPage';
 import { LandingPage } from './pages/LandingPage';
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -16,9 +17,14 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { ProfilePage } from './pages/ProfilePage';
 
 export const router = createBrowserRouter([
-  // Guest website — no account, own minimal layout (FR-087, FR-094).
+  // Passwordless guest entry and existing personalised page.
   { path: 'i/:token', element: <InvitationLandingPage /> },
   { path: 'my-event', element: <GuestEventPage /> },
+
+  // Guest event microsite and per-activity pages.
+  { path: 'e/:eventSlug', element: <GuestEventMicrositePage /> },
+  { path: 'e/:eventSlug/a/:activitySlug', element: <GuestActivityMicrositePage /> },
+
   {
     element: <PublicLayout />,
     children: [

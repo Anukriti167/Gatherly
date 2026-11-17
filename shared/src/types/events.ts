@@ -6,6 +6,8 @@ export type Timeframe = 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
 
 export interface EventSummary {
   id: string;
+  /** Human-readable URL identifier; nullable only during the staged backfill. */
+  slug: string | null;
   name: string;
   eventType: EventType;
   customTypeLabel: string | null;

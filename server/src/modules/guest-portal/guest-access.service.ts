@@ -14,6 +14,9 @@ import { toActivityDetail } from '../activities/activities.service.ts';
 const invalidLink = () =>
   new AppError(404, 'INVALID_INVITATION', 'This invitation link isn’t valid any more. It may have been replaced by a newer invitation or withdrawn by the organisers.');
 
+const notFound = () =>
+  new AppError(404, 'NOT_FOUND', 'This event or activity could not be found.');
+
 const activityInclude = {
   itinerary: { orderBy: [{ startsAt: 'asc' }, { position: 'asc' }] },
   menuCategories: { orderBy: { position: 'asc' }, include: { items: { orderBy: { position: 'asc' } } } },
@@ -109,6 +112,35 @@ export class GuestAccessService {
   }
 
   /**
+   * Microsite event homepage. The event slug is only a readable identifier;
+   * the authenticated guest session and ctx.eventId remain the authority.
+   */
+  async viewByEventSlug(ctx: GuestContext, eventSlug: string): Promise<GuestEventView> {
+    const guest = await this.prisma.guest.findUnique({
+      where: { id: ctx.guestId },
+      select: { eventId: true, event: { select: { id: true, slug: true } } },
+    });
+    if (!guest || guest.eventId !== ctx.eventId || guest.event.id !== ctx.eventId || guest.event.slug !== eventSlug) throw notFound();
+    return this.view(ctx);
+  }
+
+  /**
+   * Microsite activity page. Calling view() first applies publication visibility,
+   * guest assignment filtering, and all organiser-controlled section visibility.
+   * A guest who declined still has access because RSVP status is not used here.
+   */
+  async activityBySlug(
+    ctx: GuestContext,
+    eventSlug: string,
+    activitySlug: string,
+  ): Promise<{ view: GuestEventView; activity: GuestActivity }> {
+    const view = await this.viewByEventSlug(ctx, eventSlug);
+    const activity = view.activities.find((candidate) => candidate.slug === activitySlug);
+    if (!activity) throw notFound();
+    return { view, activity };
+  }
+
+  /**
    * FR-094 – FR-108 — everything the guest website shows, limited to this guest: only their own
    * activities (FR-096, FR-114), only sections organisers chose to show (FR-035), and never any
    * other guest's details (FR-089, FR-201).
@@ -159,7 +191,6 @@ export class GuestAccessService {
       const full = a.capacity !== null && confirmed >= a.capacity && mine !== 'CONFIRMED';
       return {
         ...detail,
-        // FR-035: hidden sections are removed entirely for guests, not just flagged.
         itinerary: a.showItinerary ? detail.itinerary : [],
         menu: a.showMenu ? detail.menu : [],
         people: a.showPeople ? detail.people : [],

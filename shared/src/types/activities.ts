@@ -3,6 +3,8 @@ import type { ActivityStatus } from '../domain/enums.js';
 export interface ActivityDetail {
   id: string;
   eventId: string;
+  /** Human-readable URL identifier; nullable only during the staged backfill. */
+  slug: string | null;
   name: string;
   description: string;
   status: ActivityStatus;
