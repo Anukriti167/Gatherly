@@ -1,294 +1,557 @@
 # Gatherly
 
-**Plan multi-activity events together, and give every guest their own personal event website.**
+**Collaborative multi-activity event planning with personalised guest
+websites.**
 
-Gatherly is for families, creators and small businesses who organise events with several parts —
-a wedding weekend (haldi, sangeet, reception), a conference (keynote, workshops, dinner), a birthday
-with a brunch and a party. Organisers plan together and **every important decision needs everyone's
-approval**. Guests need no account: each gets a secure personal link showing only the activities
-they're invited to — schedule, venue and directions, menu, dress code, RSVP, calendar export and a
-shared photo gallery.
+Gatherly is an event-management application designed for events that
+contain multiple activities. An organiser can create a parent event,
+manage its activities and guest list, coordinate co-organisers, collect
+RSVPs, and share a private guest experience. Guests access the event
+through invitation-based links without needing to create a Gatherly
+account.
 
-Built for the **GoDaddy Inclusive Innovation Hackathon 2026**, to run entirely on GoDaddy hosting.
-
----
+> **Project status:** Active development. Some capabilities may still be
+> evolving. See the repository and release notes for the current
+> implementation status.
 
 ## Contents
 
-1. [Features](#features)
-2. [Product decisions](#product-decisions)
-3. [Technical decisions](#technical-decisions)
-4. [Requirements status](#requirements-status)
-5. [Tech stack & architecture](#tech-stack--architecture)
-6. [Running locally](#running-locally)
-7. [Testing](#testing)
-8. [Configuration](#configuration)
-9. [Security & privacy](#security--privacy)
-10. [Roadmap](#roadmap)
+-   [Overview](#overview)
+-   [Key capabilities](#key-capabilities)
+-   [Application architecture](#application-architecture)
+-   [Technology stack](#technology-stack)
+-   [Repository structure](#repository-structure)
+-   [Getting started](#getting-started)
+-   [Environment configuration](#environment-configuration)
+-   [Database commands](#database-commands)
+-   [Development commands](#development-commands)
+-   [Testing](#testing)
+-   [Guest access and microsites](#guest-access-and-microsites)
+-   [Security and privacy](#security-and-privacy)
+-   [Deployment](#deployment)
+-   [Contributing](#contributing)
 
----
+## Overview
 
-## Features
+Many real-world events are made up of smaller activities. A wedding may
+include a Haldi ceremony, Mehendi, a wedding ceremony and a reception. A
+conference may include several talks, workshops and networking sessions.
 
-### Accounts
-- Register, sign in / out, change password, profile (name, optional phone).
-- Password reset by email — single-use, 1-hour links; the newest link only; all devices signed out after a reset.
-- Email confirmation (used to safely match accounts to guest invitations).
-- **Dashboard** with tabs **Upcoming · Ongoing · Completed · Cancelled**, showing events you organise
-  *and* events you're invited to as a guest (labelled **✉ Invited**; one click opens your guest page).
+Gatherly models this using a **parent event** containing one or more
+**activities**. Each activity can have its own schedule and information,
+while organisers manage a shared guest list at the parent-event level.
 
-### Events & activities
-- Create events with name, type, optional Formal/Informal planning style, timezone, dates, description.
-- **Activities** inside each event, each with its own date, time and **timezone**.
-- **Single-page activity editor** — everything for an activity on one form, saved with one click:
-  - **Where:** venue name, location, and a **live Google Map preview** (free, keyless embed); online meeting link;
-    **copy location from another activity**; new activities pre-fill the last location used.
-  - **RSVP:** optional capacity and RSVP deadline.
-  - **Itinerary:** timed entries, always shown in time order (warns when outside the activity's hours).
-  - **Menu:** categories (one-click Starters / Main Course / Desserts / Beverages) with dishes and dietary tags
-    (Vegetarian, Vegan, Jain, Non-vegetarian, Gluten-free, Contains nuts, Contains dairy, Spicy, or your own).
-  - **Speakers & performers**, **dress code & theme** (with colour swatches), **instructions**.
-  - A **"Show to guests"** switch per section.
-- Each activity card on the event page shows a summary and expands to the full details.
-- **Tabbed event page:** Overview · Activities · Guests · Organisers · Proposals · Photos · History, with live
-  counts and a **"Needs you"** strip whenever something is waiting on you.
+The platform is intended to make event coordination collaborative for
+organisers and straightforward for guests.
 
-### Organisers & approvals
-- **Co-admins:** the owner invites registered users by email; they accept or decline from their dashboard;
-  the owner can remove them. Co-admins can do everything except manage organisers.
-- **Publishing needs everyone's approval.** Submitting moves the event to *Pending Approval*; each organiser
-  approves the exact version or requests changes (back to Draft with a note). Any edit while pending resets
-  approvals. A sole organiser publishes immediately.
-- **Change proposals on published events:** remove guests, **unpublish**, **cancel**, or **mark as completed
-  early**. Organisers approve or **object** (an objection doesn't reject — it stays open for discussion), comment,
-  and the proposer can **revise** (approvals reset) or **withdraw**. Applied automatically once everyone approves
-  the same version.
-- **Automatic completion:** a published event becomes *Completed* once it ends; activities complete as they end.
+## Key capabilities
 
-### Guests
-- Add guests manually or **import a CSV** with a downloadable template (`Name, Email, Phone, Activities`).
-  - The **Activities** column takes `All` or activity names separated by `;` — each guest can have different activities.
-  - **Preview before saving:** every row is checked; duplicates and typos (e.g. *"Unknown activity "Sangeeth""*)
-    are flagged and skipped.
-- Assign guests to specific activities or **All activities** (including ones added later).
-- Filter by activity (**All guests** chip + one per activity with counts and RSVP tallies), search.
-- Phone numbers are visible to organisers only.
+### Event and activity management
 
-### Invitations & the guest website
-- **✉ Send invitations** — one personal, secure link per guest. Per guest: Invite / Resend / **Revoke link**,
-  with status *Not invited · Sending… · Invited · Opened 2 h ago · Email failed (retry) · Revoked*.
-- Invitation emails list only that guest's activities.
-- The guest's page (`/my-event`, opened via `/i/<link>` — no account) shows the event, **their personal
-  schedule** across their activities, and each activity's details with a live map, directions, join-online
-  link, itinerary, menu and dress code.
-- **RSVP per activity** — *I'll be there* / *Can't make it*, changeable until the deadline; capacity enforced;
-  confirmation email for each answer.
-- **📅 Add to calendar** (`.ics`) per activity or for the whole schedule.
-- Unpublished events show *"This event is being updated"*; cancelled and completed events show a banner.
+-   Create and manage events with event details, dates, timezone and
+    organiser information.
+-   Organise an event into multiple activities.
+-   Maintain activity-specific schedules and details, such as itinerary,
+    menu, dress code, theme and instructions.
+-   Use URL-friendly event and activity slugs for guest-facing pages.
 
-### Photo gallery
-- Organisers upload many photos at once with captions and activity tags; they go live immediately.
-- **Guest photo sharing** (switch, off by default): up to **20 photos per guest**, held for **approval**
-  (Approve / Reject with a note / Approve all); guests are emailed the decision.
-- Every invited guest can browse all approved photos of the event, filter by activity, open a **lightbox**
-  (← → Esc) and **download**.
+### Collaboration and publication workflow
 
-### Staying informed
-- **🔔 Notification bell** (unread count, latest updates, full history page) — every organiser update is
-  stored in-app *and* emailed; each links straight to the right tab or proposal.
-- **Needs your attention** on the dashboard: publishing approvals, proposals and guest photos waiting on you.
-- **History tab:** a readable, filterable timeline of everything that happened on the event, grouped by day.
-- Screens **refresh automatically** every 15 s (and when you return to the tab).
+-   Support an event owner and co-organisers.
+-   Manage event planning and proposals.
+-   For initial publication, require approval from the event owner and
+    all co-organisers in the approval group.
+-   Track approvals against the event version submitted for approval.
+-   Return an event to Draft when changes are requested.
+-   Invalidate approvals for a pending version when the event is edited,
+    so the revised version can be reviewed afresh.
 
----
+### Guest management and RSVP
 
-## Product decisions
+-   Maintain one guest list for the parent event.
+-   Assign guests to the activities they are invited to attend.
+-   Send invitations and allow guests to access their invitation without
+    creating an account.
+-   Collect activity-level RSVP responses.
+-   Send RSVP confirmation and event-related emails.
+-   Keep guest contact details restricted to event administrators.
 
-Decisions taken with the product owner while building, on top of the
-[functional requirements](docs/functional-requirements.txt):
+### Personalised guest websites
 
-**Platform**
-- **GoDaddy only, nothing paid.** No outside services (managed databases, cloud storage, map/weather APIs) and
-  nothing that needs billing. Maps use Google's free keyless embed and plain Maps links; venue search
-  (FR-186–188) is replaced by typing the location, and weather (FR-192) is dropped.
-- **AI features are optional and not agentic for now** (FR-211–216 not built yet).
+-   Provide a guest-facing event microsite.
+-   Provide activity pages for activities assigned to the guest.
+-   Scope guest-facing information to the active guest session and the
+    guest's activity assignments.
+-   Allow guests to revisit their event information while their
+    invitation access remains valid.
 
-**Approvals**
-- The person who submits or proposes **counts as approving**, so a sole organiser acts immediately.
-- Approvals bind to an **exact version**; any edit while pending resets them (FR-143, FR-228).
-- The approver list is **fixed when a round starts** (FR-224, FR-146): people who join later aren't required.
-  If a required approver is **removed**, the publication round restarts and open proposals stop waiting for them,
-  so nothing stalls.
-- **After publishing**, event details and activities change only through a proposal. Invitations,
-  announcements, suggestion replies and photo moderation stay direct; cover images stay direct (FR-046, FR-153).
-- **Unpublishing** (not in the FRS) needs everyone's approval; the event returns to Draft and guests see
-  *"This event is being updated"* until it's re-published.
-- **Completing early** is a proposal, only once the event has started; activities that never started are cancelled.
+### Photos and gallery
 
-**Guests**
-- **Adding and editing guests — including activity assignments — is direct at any time**, before or after
-  publishing. **Removing a guest after publishing needs everyone's approval**, because it cuts off their access.
-- The guest list is **not part of the approved content**: guest changes don't bump the event version or reset
-  pending approvals.
-- **Every guest change is emailed to the other organisers**, listing exactly what changed
-  (e.g. *"No longer invited to: Sangeet"*).
-- **Invitations are generic:** one personal link per guest covering all their activities (FR-086).
-  Re-sending replaces the link; there is deliberately **no bulk re-send** (it would break every link already sent).
-- Invited events appear on a user's dashboard only for a **confirmed email** — nobody can see someone else's
-  invitation by signing up with their address. Email confirmation was added for this (not in the FRS).
-- In the gallery, guests see other guests as **short names** ("Priya S."), never emails or phones.
+-   Support event photo uploads and an event gallery.
+-   Allow organisers to review guest-submitted photos before
+    publication.
+-   Keep photo access behind authorised application routes rather than
+    exposing storage files directly.
+-   Support event-level and activity-associated photos.
 
-**Notifications**
-- RSVPs notify organisers **in-app only** (no email per RSVP); guests get a confirmation email.
-- Guest photos to review appear once per event in *Needs your attention*, not as one notification per photo.
+### Additional event features
 
-**Layout**
-- One page for each activity (no extra clicks), a tabbed event page so nothing piles up, and "(optional)" on
-  individual fields rather than section titles.
+The broader product specification also covers event history,
+notifications, proposals, calendar exports, venue information and
+post-event access. Check the current implementation before relying on
+any individual capability in a production workflow.
 
----
+## Application architecture
 
-## Technical decisions
+Gatherly is organised as an npm-workspaces monorepo with three packages:
 
-| Decision | Why |
-|---|---|
-| **npm-workspaces monorepo** (`client`, `server`, `shared`) | One repo; **shared Zod schemas, types and the permission policy** are used by both sides, so validation and rules can't drift. |
-| **Express serves the built React app** | One process, one origin — no CORS, simple cookies, fits GoDaddy Node.js hosting. |
-| **Prisma 7 with the query compiler** + `@prisma/adapter-pg` | No platform-specific engine binary to break on the host. |
-| **Node's built-in `scrypt`** for passwords | Strong and memory-hard with no native add-on to compile on the host. |
-| **Server-side sessions**, tokens stored as **SHA-256 hashes** | Instant sign-out and revocation; a database leak exposes no live tokens. Guests get a separate cookie. |
-| **One permission table** (`shared/src/domain/event-policy.ts`) | "Who can do what, in which status" lives in one place; the server enforces it, the UI uses it to show controls. |
-| **Every event edit goes through one path** (`EventsService.runEdit`) | Permission check, optimistic version check and version bump in one transaction, so approvals can't be bypassed. |
-| **Approval engine** shared by publishing and proposals | Snapshot approvers, version-bound decisions, unanimous apply. |
-| **Database-backed email outbox** with an in-process worker | Rate-limited sending (protects the Titan mailbox), retries with back-off, visible delivery status (FR-160). |
-| **In-process background jobs** (outbox, completion sweep) | The host runs a single process; no Redis or separate workers needed. |
-| **Images resized in the browser**; server checks magic bytes and strips metadata | Smaller uploads on mobile, GPS removed, and **no native image library** on the server. |
-| **Storage adapter** for photos (local disk now) | Can switch to database storage if the host's disk doesn't persist, without touching callers. |
-| **Polling (15 s) instead of websockets** | Simple and reliable on shared hosting; good enough at this scale. |
-| **Readable audit log** | Every action is recorded once and reused for the History tab and accountability (FR-197–199). |
-
----
-
-## Requirements status
-
-Against the 230 requirements in [`docs/functional-requirements.txt`](docs/functional-requirements.txt):
-
-| Area | FRs | Status |
-|---|---|---|
-| Accounts | 001–007 | ✅ Done (profile image: later) |
-| Events | 008–018 | ✅ Done |
-| Activities & activity details | 019–036 | ✅ Done |
-| Cover images | 037–046 | ⏳ Not yet |
-| Templates | 047–059, 220 | ⏳ Planning style stored; templates not yet |
-| Owner & co-admins | 060–067 | ✅ Done (ownership transfer FR-065: later) |
-| Guests & assignments | 068–082 | ✅ Done (CSV; direct `.xlsx` later) |
-| Invitations & guest access | 083–093 | ✅ Done |
-| Personalised guest website | 094–108 | ✅ Done, except announcements (103) and suggestions (104) sections |
-| RSVP | 109–119 | ✅ Done |
-| Guest suggestions | 120–131 | ⏳ Not yet |
-| Change proposals | 132–153 | 🟡 Engine done for guest removal, unpublish, cancel, complete; event-detail & activity changes not yet |
-| Announcements & notifications | 154–160 | 🟡 Delivery status and confirmations done; announcements not yet |
-| Photo gallery | 161–178, 217 | ✅ Done |
-| Event history | 179–185 | ✅ Done |
-| Integrations | 186–196 | 🟡 Maps link, `.ics`, meeting links, email, manual entry done; venue search replaced (decision); weather dropped; meeting-provider integration deferred (FR-194) |
-| Audit, security & privacy | 197–205 | ✅ Done |
-| Public website & contact form | 206–210 | 🟡 Landing page done; contact form not yet |
-| AI (optional) | 211–216 | ⏳ Not built (decision) |
-| Other confirmed | 217–221 | ✅ 217, 218, 221 done · 219 custom URL deferred (FRS) · 220 with templates |
-| Initial publication approval | 222–230 | ✅ Done |
-
----
-
-## Tech stack & architecture
-
-- **Client:** React 19, Vite, Tailwind CSS 4, React Router, TanStack Query
-- **Server:** Node.js, Express 5, Prisma 7, PostgreSQL 17, Zod, Nodemailer, Pino, Multer
-- **Shared:** Zod schemas, domain types, the permission policy, timezone, CSV and map helpers
-- **Tests:** Vitest + Supertest against a real PostgreSQL test database
-
-```
-client/   React app — pages/, features/<area>/ (hooks + components), components/, lib/
-server/   Express API — src/modules/<area>/ (service + routes), src/lib/, src/middleware/
-          prisma/schema.prisma + migrations, test/unit, test/integration
-shared/   schemas/, domain/ (enums, event-policy), types/, time.ts, csv.ts
-docs/     functional requirements and hackathon guide
+``` text
+gatherly/
+├── client/       # React frontend
+├── server/       # Express API and application services
+├── shared/       # Shared TypeScript types and validation
+├── package.json
+└── package-lock.json
 ```
 
-Server modules: `auth`, `users`, `events`, `activities`, `memberships`, `publication`, `proposals`, `guests`,
-`invitations`, `guest-portal`, `rsvp`, `photos`, `notifications`, `outbox`, `completion`, `audit`.
+At a high level:
 
----
+``` text
+Browser
+   |
+   v
+React application (Vite)
+   |
+   | /api requests
+   v
+Express API
+   |
+   +---- Application modules and business rules
+   |
+   +---- Prisma ORM / database adapter
+   |          |
+   |          v
+   |        MySQL
+   |
+   +---- Email delivery
+   |
+   +---- Authorised photo storage
+```
 
-## Running locally
+The frontend and API are served from the same application origin in the
+hosted setup. During local development, Vite serves the frontend and
+proxies API requests to the Express server.
 
-**Prerequisites:** Node.js 20+ (LTS) and PostgreSQL 17.
+## Technology stack
 
-```bash
+  Area                           Technologies
+  ------------------------------ ----------------------------------------------
+  Language                       TypeScript
+  Frontend                       React 19, React Router, TanStack Query
+  Frontend tooling and styling   Vite, Tailwind CSS
+  Backend                        Node.js, Express 5
+  Validation                     Zod
+  Database access                Prisma ORM
+  Hosted database                MySQL using Prisma's MariaDB adapter
+  Email                          Nodemailer and configured email gateway/SMTP
+  Testing                        Vitest, Supertest
+  Build tooling                  npm workspaces, tsup
+
+The repository has previously included local PostgreSQL-oriented
+configuration during development. The current GoDaddy deployment
+configuration uses managed MySQL. Use the database provider and
+environment variables configured for the environment you are working
+with.
+
+## Repository structure
+
+``` text
+.
+├── client/
+│   └── src/
+│       ├── features/       # Feature-specific UI and hooks
+│       ├── pages/          # Application pages
+│       ├── lib/            # Frontend utilities and API client
+│       └── ...
+├── server/
+│   ├── prisma/
+│   │   ├── migrations/     # Database migrations
+│   │   └── schema.prisma   # Data model
+│   ├── scripts/            # Operational and maintenance scripts
+│   ├── src/
+│   │   ├── modules/        # Backend domain modules
+│   │   ├── middleware/
+│   │   ├── config/
+│   │   └── lib/
+│   └── test/
+│       ├── unit/
+│       └── integration/
+├── shared/
+│   └── src/                # Shared types, schemas and utilities
+├── package.json
+└── package-lock.json
+```
+
+The exact contents may change as the project evolves.
+
+## Getting started
+
+### Prerequisites
+
+-   Node.js 20 or later (use the Node.js version supported by the
+    deployment environment).
+-   npm.
+-   A database instance supported by the active Prisma
+    adapter/configuration.
+-   Git.
+
+### 1. Clone the repository
+
+``` bash
+git clone https://github.com/<your-github-username>/<your-repository>.git
+cd <your-repository>
+```
+
+### 2. Install dependencies
+
+Run this from the repository root:
+
+``` bash
 npm install
-cp server/.env.example server/.env        # then set DATABASE_URL / TEST_DATABASE_URL passwords
-npm run db:migrate                        # creates tables and generates the Prisma client
-npm run dev                               # API on :3000, web app on http://localhost:5173
 ```
 
-- Until SMTP is configured, **emails are printed to the server log** (with their links).
-- Test the GoDaddy (Titan) mailbox: `npm run mail:test -w server -- you@example.com`.
-- Production build: `npm run build`, then `npm start` (Express serves the built client).
+The project uses npm workspaces, so install dependencies once from the
+root.
 
----
+### 3. Configure environment variables
+
+Create the server environment file:
+
+``` bash
+cp server/.env.example server/.env
+```
+
+On Windows PowerShell:
+
+``` powershell
+Copy-Item server/.env.example server/.env
+```
+
+Update the database and email settings for your local environment. Do
+not commit `.env` files or real credentials.
+
+### 4. Generate the Prisma client
+
+``` bash
+npm run db:generate
+```
+
+### 5. Apply database migrations
+
+For a local development database, use:
+
+``` bash
+npm run db:migrate
+```
+
+This invokes the server workspace's Prisma development migration
+command. Make sure the configured database is the intended local
+development database before running it.
+
+### 6. Start the application
+
+``` bash
+npm run dev
+```
+
+The root development script starts the frontend and backend
+concurrently. The default local setup uses:
+
+-   Frontend: `http://localhost:5173`
+-   Backend API: `http://localhost:3000`
+
+Open the frontend URL in your browser.
+
+## Environment configuration
+
+The backend validates its configuration at startup. The main variables
+are listed below; consult `server/.env.example` and
+`server/src/config/env.ts` for the exact current schema and defaults.
+
+  -----------------------------------------------------------------------
+  Variable                            Purpose
+  ----------------------------------- -----------------------------------
+  `NODE_ENV`                          Runtime environment (`development`,
+                                      `test` or `production`)
+
+  `PORT`                              HTTP server port; the hosting
+                                      platform may supply this
+
+  `LOG_LEVEL`                         Application log verbosity
+
+  `APP_ORIGIN`                        Public application origin used for
+                                      links and origin checks
+
+  `DATABASE_URL`                      Database connection URL, when using
+                                      URL-based configuration
+
+  `DB_HOST`                           Managed database host alternative
+
+  `DB_PORT`                           Managed database port
+
+  `DB_NAME`                           Managed database name
+
+  `DB_USER`                           Managed database username
+
+  `DB_PASSWORD`                       Managed database password
+
+  `TRUST_PROXY`                       Configure Express proxy trust when
+                                      running behind a reverse proxy
+
+  `SMTP_HOST`                         SMTP server host, if SMTP is used
+
+  `SMTP_PORT`                         SMTP server port
+
+  `SMTP_SECURE`                       Whether SMTP uses a secure
+                                      connection
+
+  `SMTP_USER`                         SMTP username
+
+  `SMTP_PASSWORD`                     SMTP password
+
+  `MAIL_FROM`                         Sender identity for outgoing email
+
+  `CONTACT_INBOX`                     Destination for contact-form
+                                      submissions
+
+  `RATE_LIMIT_ENABLED`                Enables or disables configured rate
+                                      limiting
+
+  `EMAIL_RATE_PER_MINUTE`             Outgoing email rate limit
+
+  `STORAGE_DIR`                       Directory used for uploaded photo
+                                      storage
+
+  `ANTHROPIC_API_KEY`                 Optional key for AI-related
+                                      capabilities
+  -----------------------------------------------------------------------
+
+For GoDaddy's managed MySQL configuration, the application can build its
+database connection from `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` and
+`DB_PASSWORD`. Alternatively, configure `DATABASE_URL` where
+appropriate.
+
+**Never put secrets in source code, README examples, screenshots,
+commits or frontend environment variables.** Set production secrets
+through the hosting provider's environment/secrets settings.
+
+## Database commands
+
+Run these commands from the repository root:
+
+  -----------------------------------------------------------------------
+  Command                             Purpose
+  ----------------------------------- -----------------------------------
+  `npm run db:generate`               Generate the Prisma client
+
+  `npm run db:migrate`                Run the server's development
+                                      migration workflow
+  -----------------------------------------------------------------------
+
+The server workspace also defines deployment-oriented Prisma commands.
+Production migrations should be applied only as part of a deliberate
+deployment process and against the intended database.
+
+**Important:** Back up production data before applying schema changes.
+Do not use development migration commands against a production database.
+
+## Development commands
+
+Run from the repository root:
+
+  -----------------------------------------------------------------------
+  Command                             Purpose
+  ----------------------------------- -----------------------------------
+  `npm run dev`                       Start frontend and backend in
+                                      development mode
+
+  `npm run build`                     Build the client and server
+
+  `npm run start`                     Start the server workspace
+
+  `npm run typecheck`                 Type-check shared, server and
+                                      client workspaces
+
+  `npm test`                          Run the server test suite
+
+  `npm run db:generate`               Generate Prisma client
+
+  `npm run db:migrate`                Run local development migrations
+  -----------------------------------------------------------------------
+
+Useful workspace-specific commands:
+
+``` bash
+npm run dev -w client
+npm run dev -w server
+npm run test -w server
+npm run test:watch -w server
+npm run typecheck -w client
+npm run typecheck -w server
+npm run typecheck -w shared
+```
 
 ## Testing
 
-```bash
-npm test            # 268 unit + integration tests
-npm run typecheck   # all three workspaces
+The backend test suite uses Vitest and Supertest. Tests are organised
+into unit and integration suites under `server/test`.
+
+Run the test suite:
+
+``` bash
+npm test
 ```
 
-Integration tests use a separate `gatherly_test` database (created automatically, never the development one)
-and cover the security-sensitive paths: access control, privacy of guest data, approval rules, capacity under
-concurrency, token handling, upload validation and metadata stripping.
+Run tests in watch mode:
 
----
+``` bash
+npm run test:watch -w server
+```
 
-## Configuration
+Run type checks across all workspaces:
 
-`server/.env` (see `server/.env.example`; never committed):
+``` bash
+npm run typecheck
+```
 
-| Variable | Purpose |
-|---|---|
-| `APP_ORIGIN` | Public URL (links in emails, CSRF origin check). Must be `https://` in production. |
-| `DATABASE_URL`, `TEST_DATABASE_URL` | PostgreSQL connections (the test one is emptied by tests). |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | Titan mailbox. `MAIL_FROM` must be the same mailbox as `SMTP_USER`. If login fails on `smtp.titan.email`, use `smtpout.secureserver.net`. |
-| `CONTACT_INBOX` | Mailbox that receives contact-form messages. |
-| `EMAIL_RATE_PER_MINUTE` | Outbox sending rate (default 20). |
-| `STORAGE_DIR` | Folder for uploaded photos (must persist between deploys). |
-| `TRUST_PROXY` | Proxy hops in front of the app on the host. |
-| `RATE_LIMIT_ENABLED`, `LOG_LEVEL`, `PORT`, `NODE_ENV` | Runtime settings. |
+Build the application:
 
----
+``` bash
+npm run build
+```
 
-## Security & privacy
+Use a dedicated test database and test configuration. Never point
+destructive test setup at a production database.
 
-- **Authorisation on every request** through one policy; non-members get *not found*, not *forbidden*.
-- **Guests only ever see their own data** — never other guests' emails or phone numbers; hidden sections are
-  removed, not just hidden. Revoking an invitation or removing a guest ends their access immediately.
-- **Tokens** (sessions, reset, confirmation, invitations) are 256-bit random values stored only as hashes;
-  invitation tokens are exchanged for a cookie and removed from the address bar.
-- **CSRF:** SameSite cookies plus an Origin check on every state-changing request.
-- **Input validation** with Zod on the server for every endpoint; field-level errors.
-- **Uploads:** real type checked by content, size and pixel limits, metadata (incl. GPS) stripped, files served
-  only through an access-checked route.
-- **Rate limits** on sign-in, registration, resets, invitation links, co-admin invites and uploads.
-- **Helmet** security headers and a Content-Security-Policy (only Google's map frame is allowed).
-- **Concurrency safety:** optimistic versioning for edits, row locks for RSVP capacity, conditional updates for
-  approvals.
-- **Secrets** only in `server/.env` (git-ignored); passwords hashed with scrypt.
+## Guest access and microsites
 
----
+Guest access is invitation-based:
 
-## Roadmap
+1.  An organiser adds a guest to an event and assigns the guest to one
+    or more activities.
+2.  Gatherly sends an invitation containing a private invitation link.
+3.  The guest opens the link.
+4.  The backend exchanges the invitation token for a guest session and
+    sets a guest-specific cookie.
+5.  The guest can access event and activity information permitted by
+    their invitation and activity assignments.
 
-1. **Deploy to GoDaddy** — Node.js hosting, own domain with HTTPS, Titan mailbox.
-2. **Contact form** on the public site → the domain mailbox (FR-208–210).
-3. **Change proposals for event details and activities** on published events.
-4. **Announcements** (FR-154–159) and **guest suggestions** (FR-120–131).
-5. Cover images and templates; ownership transfer; `.xlsx` import; optional AI helpers.
+Guest-facing routes use URL slugs rather than internal database IDs. The
+route patterns are:
+
+``` text
+/e/:eventSlug
+/e/:eventSlug/a/:activitySlug
+```
+
+For example, if an event slug is `sample-wedding` and an activity slug
+is `mehendi`, the URLs are:
+
+``` text
+https://your-domain.example/e/sample-wedding
+https://your-domain.example/e/sample-wedding/a/mehendi
+```
+
+The exact slugs are generated/stored by the application. Do not assume
+that a display name always maps to a particular slug; use the stored
+slug for the event and activity.
+
+The guest microsite API checks the active guest session and enforces
+activity assignment on the server. A successful RSVP email is not, by
+itself, proof that a guest microsite request is authorised.
+
+## Security and privacy
+
+Gatherly handles private event information and guest contact details.
+Important design principles include:
+
+-   Event information is restricted to authorised organisers and invited
+    guests.
+-   Guest-facing API responses are scoped to the active guest session.
+-   Guests should only see activities to which they have been assigned.
+-   Guest contact details are restricted to event administrators.
+-   Invitation and session tokens must be treated as secrets.
+-   Guest sessions use a separate cookie from organiser sign-in.
+-   Uploaded photos are served through authorised application routes.
+-   Request validation and rate limiting are applied at the API
+    boundary.
+-   Production secrets belong in the hosting provider's
+    secret/environment configuration.
+
+Do not share invitation URLs, session cookies, database credentials,
+SMTP passwords or guest CSV exports publicly.
+
+## Deployment
+
+The application has been deployed using GoDaddy Node.js Hosting.
+
+The root project is an npm-workspaces application. The root scripts
+provide the build and start entry points:
+
+``` bash
+npm run build
+npm start
+```
+
+For GoDaddy deployment:
+
+1.  Configure the app's Node.js runtime and environment variables in the
+    GoDaddy dashboard.
+2.  Ensure the deployment package contains the required application
+    files, workspace manifests, lockfile, Prisma schema and migrations,
+    and built assets as required by the selected deployment workflow.
+3.  Configure the managed MySQL connection using the database
+    credentials supplied by GoDaddy.
+4.  Set `APP_ORIGIN` to the exact HTTPS origin used by the deployed
+    application.
+5.  Configure email delivery settings or the hosting provider's
+    supported email gateway.
+6.  Deploy to Preview and inspect runtime logs and application
+    behaviour.
+7.  Verify organiser sign-in, invitation delivery, guest-session
+    creation, RSVP submission and guest microsite access.
+8.  Publish only after the Preview deployment has been tested.
+
+The hosted application must listen on the port supplied by the platform
+through `process.env.PORT` (or the validated `PORT` configuration).
+
+Preview and Live may share managed resources depending on the hosting
+configuration. Confirm the database and storage behaviour in the GoDaddy
+dashboard before running migrations or testing operations that modify
+data.
+
+## Contributing
+
+Contributions and improvements are welcome.
+
+A useful workflow is:
+
+1.  Create a branch for the change.
+2.  Keep domain logic in the appropriate server module.
+3.  Put reusable contracts and validation in `shared` when they need to
+    be used by both client and server.
+4.  Add or update tests for changed behaviour.
+5.  Run type checks and tests.
+6.  Review database migrations carefully before deploying.
+7.  Open a pull request describing the change and its impact.
+
+## Project vision
+
+Gatherly aims to make complex, multi-part events easier to plan and more
+personal to attend --- giving organisers a collaborative workspace and
+giving every guest a simple, private view of the activities that matter
+to them.
+
+------------------------------------------------------------------------
+
+**Built with TypeScript, React, Node.js and Prisma.**
