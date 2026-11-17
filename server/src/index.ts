@@ -21,7 +21,6 @@ const server = app.listen(config.port, () => {
     return;
   }
 
-  // Verify SMTP connection and authentication without sending an email.
   if (mailer instanceof SmtpMailer) {
     void mailer.verify()
       .then(() => {
@@ -33,18 +32,29 @@ const server = app.listen(config.port, () => {
               code?: string;
               responseCode?: number;
               command?: string;
+              response?: string;
+              errno?: string;
+              syscall?: string;
+              address?: string;
+              port?: number;
             }
           : undefined;
 
+        const details = {
+          name: error?.name ?? 'UnknownError',
+          message: error?.message ?? String(err),
+          code: error?.code,
+          responseCode: error?.responseCode,
+          command: error?.command,
+          response: error?.response,
+          errno: error?.errno,
+          syscall: error?.syscall,
+          address: error?.address,
+          port: error?.port,
+        };
+
         logger.error(
-          {
-            errorName: error?.name ?? 'UnknownError',
-            errorMessage: error?.message ?? String(err),
-            smtpCode: error?.code,
-            smtpResponseCode: error?.responseCode,
-            smtpCommand: error?.command,
-          },
-          'SMTP verification failed',
+          `SMTP verification failed: ${JSON.stringify(details)}`,
         );
       });
   }
