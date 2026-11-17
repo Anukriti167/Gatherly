@@ -28,15 +28,9 @@ const envSchema = z.object({
       const n = Number(v);
       return Number.isInteger(n) && n >= 0 ? n : false;
     }),
-  SMTP_HOST: z.preprocess(emptyToUndefined, z.string().optional()),
-  SMTP_PORT: z.coerce.number().int().positive().default(465),
-  SMTP_SECURE: booleanString.default(true),
-  SMTP_USER: z.preprocess(emptyToUndefined, z.string().optional()),
-  SMTP_PASSWORD: z.preprocess(emptyToUndefined, z.string().optional()),
-  MAIL_FROM: z.string().default('Gatherly <no-reply@localhost>'),
   CONTACT_INBOX: z.preprocess(emptyToUndefined, z.email().optional()),
   RATE_LIMIT_ENABLED: booleanString.default(true),
-  // Max emails sent per minute from the queue (protects the Titan mailbox from bulk invites).
+  // Maximum emails sent per minute by the application.
   EMAIL_RATE_PER_MINUTE: z.coerce.number().int().min(1).max(1000).default(20),
   ANTHROPIC_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
   CLIENT_DIST_DIR: z.preprocess(emptyToUndefined, z.string().optional()),
@@ -68,9 +62,7 @@ export interface AppConfig {
     guestTtlMs: number;
   };
   mail: {
-    from: string;
     contactInbox?: string;
-    smtp?: { host: string; port: number; secure: boolean; user?: string; password?: string };
   };
   anthropicApiKey?: string;
 }
@@ -84,15 +76,18 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
     const issues = parsed.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`).join('\n');
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
+
   const e = parsed.data;
   const databaseUrl =
     e.DATABASE_URL ??
     (e.DB_HOST && e.DB_NAME && e.DB_USER
       ? `mysql://${encodeURIComponent(e.DB_USER)}:${encodeURIComponent(e.DB_PASSWORD ?? '')}@${e.DB_HOST}:${e.DB_PORT ?? '3306'}/${e.DB_NAME}`
       : undefined);
+
   if (!databaseUrl) {
     throw new Error('Invalid environment configuration:\n  - DATABASE_URL (or DB_HOST, DB_NAME, DB_USER, DB_PASSWORD) is required');
   }
+
   const isProduction = e.NODE_ENV === 'production';
   const secureCookie = e.APP_ORIGIN.startsWith('https://');
 
@@ -123,11 +118,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
       guestTtlMs: 90 * DAY,
     },
     mail: {
-      from: e.MAIL_FROM,
       contactInbox: e.CONTACT_INBOX,
-      smtp: e.SMTP_HOST
-        ? { host: e.SMTP_HOST, port: e.SMTP_PORT, secure: e.SMTP_SECURE, user: e.SMTP_USER, password: e.SMTP_PASSWORD }
-        : undefined,
     },
     anthropicApiKey: e.ANTHROPIC_API_KEY,
   };

@@ -1,6 +1,6 @@
-import nodemailer, { type Transporter } from 'nodemailer';
 import type { AppConfig } from '../config/env.ts';
 import type { Logger } from './logger.ts';
+import { sendEmail } from './email-gateway.ts';
 
 export interface MailMessage {
   to: string;
@@ -14,65 +14,31 @@ export interface Mailer {
   send(message: MailMessage): Promise<void>;
 }
 
-/** Sends through SMTP — in production, the Titan mailbox on our GoDaddy domain. */
-export class SmtpMailer implements Mailer {
-  private readonly transport: Transporter;
-
-  constructor(
-    smtp: NonNullable<AppConfig['mail']['smtp']>,
-    private readonly from: string,
-  ) {
-    this.transport = nodemailer.createTransport({
-      host: smtp.host,
-      port: smtp.port,
-      secure: smtp.secure,
-      auth: smtp.user ? { user: smtp.user, pass: smtp.password } : undefined,
+/**
+ * Sends transactional email through GoDaddy Node.js Hosting's built-in
+ * email gateway. The gateway chooses the canonical sender, so this class
+ * deliberately does not set a `from` address.
+ */
+export class GoDaddyMailer implements Mailer {
+  async send(message: MailMessage): Promise<void> {
+    await sendEmail({
+      to: message.to,
+      subject: message.subject,
+      text: message.text,
+      html: message.html,
+      ...(message.replyTo ? { replyTo: message.replyTo } : {}),
     });
   }
-
-  async send(message: MailMessage): Promise<void> {
-    await this.transport.sendMail({ from: this.from, ...message });
-  }
-
-  /** Connects and authenticates without sending anything. Throws with the SMTP error if it fails. */
-  async verify(): Promise<void> {
-    await this.transport.verify();
-  }
 }
 
-/** Extracts the bare address from `Name <addr@x.com>` or `addr@x.com`, lower-cased. */
-export function mailAddressOf(from: string): string {
-  const match = /<([^>]+)>/.exec(from);
-  return (match?.[1] ?? from).trim().toLowerCase();
-}
-
-/**
- * Titan (GoDaddy) only relays mail whose From address is the authenticated mailbox.
- * Returns a human-readable problem, or null when the configuration is consistent.
- */
-export function smtpConfigProblem(config: AppConfig['mail']): string | null {
-  const smtp = config.smtp;
-  if (!smtp) return null;
-
-  if (!smtp.user || !smtp.password) {
-    return 'SMTP_USER and SMTP_PASSWORD are required when SMTP_HOST is set';
-  }
-
-  if (mailAddressOf(config.from) !== smtp.user.trim().toLowerCase()) {
-    return `MAIL_FROM (${mailAddressOf(config.from)}) must match SMTP_USER (${smtp.user}) — Titan rejects other senders`;
-  }
-
-  return null;
-}
-
-/** Development fallback: prints emails (including links) to the log instead of sending. */
+/** Development fallback: prints emails (including links) to the log. */
 export class ConsoleMailer implements Mailer {
   constructor(private readonly logger: Logger) {}
 
   async send(message: MailMessage): Promise<void> {
     this.logger.info(
       { to: message.to, subject: message.subject },
-      `\n──── email (not sent: SMTP not configured) ────\n${message.text}\n────────────────`,
+      `\n──── email (not sent: local development mode) ────\n${message.text}\n────────────────`,
     );
   }
 }
@@ -94,27 +60,23 @@ export class MemoryMailer implements Mailer {
   }
 }
 
+/**
+ * Use GoDaddy's gateway in production (including GoDaddy Preview).
+ * Keep local development on ConsoleMailer so local runs do not try to
+ * contact the hosting-only loopback gateway.
+ */
 export function createMailer(config: AppConfig, logger: Logger): Mailer {
-  if (!config.mail.smtp) return new ConsoleMailer(logger);
-
-  const problem = smtpConfigProblem(config.mail);
-
-  if (problem) {
-    // Fail fast in production; in development fall back to the console so work isn't blocked.
-    if (config.isProduction) {
-      throw new Error(`Email configuration error: ${problem}`);
-    }
-
-    logger.warn(`Email configuration problem — printing emails to the console instead: ${problem}`);
-    return new ConsoleMailer(logger);
+  if (config.isProduction) {
+    return new GoDaddyMailer();
   }
 
-  return new SmtpMailer(config.mail.smtp, config.mail.from);
+  return new ConsoleMailer(logger);
 }
 
 /**
- * Fire-and-forget send: the request doesn't wait on SMTP and failures are logged.
- * (Replaced by the DB-backed outbox with retries and delivery status later, FR-160.)
+ * Fire-and-forget send: the request doesn't wait for email delivery and
+ * failures are logged. (Replaced by the DB-backed outbox with retries
+ * and delivery status later, FR-160.)
  */
 export function sendInBackground(
   mailer: Mailer,
@@ -122,22 +84,14 @@ export function sendInBackground(
   message: MailMessage,
 ): void {
   mailer.send(message).catch((err: unknown) => {
-    const error = err instanceof Error
-      ? err as Error & {
-          code?: string;
-          responseCode?: number;
-          command?: string;
-        }
-      : undefined;
+    const error = err instanceof Error ? err : undefined;
 
     logger.error(
       {
+        to: message.to,
         subject: message.subject,
         errorName: error?.name ?? 'UnknownError',
         errorMessage: error?.message ?? String(err),
-        smtpCode: error?.code,
-        smtpResponseCode: error?.responseCode,
-        smtpCommand: error?.command,
       },
       'mail.send_failed',
     );
