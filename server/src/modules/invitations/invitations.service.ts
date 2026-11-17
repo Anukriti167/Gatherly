@@ -132,6 +132,28 @@ export class InvitationsService {
     });
   }
 
+  /** Temporary diagnostic endpoint: inspect recent invitation email deliveries. */
+  async outboxDiagnostics(eventId: string, userId: string) {
+    await this.events.authorize(eventId, userId, 'event.view');
+
+    const emails = await this.prisma.emailOutbox.findMany({
+      where: { eventId, kind: 'invitation' },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: {
+        id: true,
+        status: true,
+        attempts: true,
+        lastError: true,
+        nextAttemptAt: true,
+        sentAt: true,
+        createdAt: true,
+      },
+    });
+
+    return { emails };
+  }
+
   /** Re-queues a failed invitation email (organiser "retry"). */
   async retryDelivery(eventId: string, guestId: string, userId: string): Promise<void> {
     await this.events.authorize(eventId, userId, 'invitations.send');
