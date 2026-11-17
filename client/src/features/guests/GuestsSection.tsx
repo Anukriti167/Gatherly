@@ -17,6 +17,12 @@ type Mode = { kind: 'list' } | { kind: 'add' } | { kind: 'edit'; guest: GuestVie
 const emptyGuest: GuestFormValues = { name: '', email: '', phone: '', allActivities: true, activityIds: [] };
 
 const invitedTo = (g: GuestView, activityId: string) => g.allActivities || g.activityIds.includes(activityId);
+type RsvpFilter = 'ALL' | 'CONFIRMED' | 'DECLINED' | 'PENDING';
+
+const csvCell = (value: unknown) => {
+  const text = value == null ? '' : String(value);
+  return /[\",\r\n]/.test(text) ? `\"${text.replaceAll('\"', '\"\"')}\"` : text;
+};
 
 function GuestRow({
   guest,
@@ -189,6 +195,7 @@ export function GuestsSection({ event }: { event: EventDetail }) {
   const [mode, setMode] = useState<Mode>({ kind: 'list' });
   const [query, setQuery] = useState('');
   const [activityFilter, setActivityFilter] = useState('');
+  const [rsvpFilter, setRsvpFilter] = useState<RsvpFilter>('ALL');
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   // Adding/editing guests is direct at any time; removal after publishing needs a change proposal.
   const canEdit = event.allowedActions.includes('guests.manage');
@@ -202,10 +209,40 @@ export function GuestsSection({ event }: { event: EventDetail }) {
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return (guests ?? []).filter(
-      (g) => (!q || g.name.toLowerCase().includes(q) || g.email.includes(q)) && (!activityFilter || invitedTo(g, activityFilter)),
-    );
-  }, [guests, query, activityFilter]);
+    return (guests ?? []).filter((g) => {
+      if (q && !g.name.toLowerCase().includes(q) && !g.email.toLowerCase().includes(q)) return false;
+      const assigned = activityFilter
+        ? [activityFilter].filter((id) => invitedTo(g, id))
+        : activities.filter((a) => invitedTo(g, a.id)).map((a) => a.id);
+      if (activityFilter && assigned.length === 0) return false;
+      if (rsvpFilter === 'ALL') return true;
+      return assigned.some((id) => (rsvps?.answers[g.id]?.[id] ?? 'PENDING') === rsvpFilter);
+    });
+  }, [guests, query, activityFilter, rsvpFilter, activities, rsvps]);
+
+  const exportCsv = () => {
+    const rows: string[][] = [['Guest name', 'Email', 'Phone', 'Activity', 'RSVP status']];
+    for (const guest of visible) {
+      const assignedActivities = activityFilter
+        ? activities.filter((a) => a.id === activityFilter && invitedTo(guest, a.id))
+        : activities.filter((a) => invitedTo(guest, a.id));
+      for (const activity of assignedActivities) {
+        const status = rsvps?.answers[guest.id]?.[activity.id] ?? 'PENDING';
+        if (rsvpFilter !== 'ALL' && status !== rsvpFilter) continue;
+        rows.push([guest.name, guest.email, guest.phone ?? '', activity.name, status === 'CONFIRMED' ? 'Going' : status === 'DECLINED' ? 'Declined' : 'Not responded']);
+      }
+    }
+    const csv = rows.map((row) => row.map(csvCell).join(',')).join('\r\n') + '\r\n';
+    const blob = new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${event.name.trim().replace(/[^a-z0-9-_]+/gi, '-').replace(/^-|-$/g, '') || 'event'}-guest-rsvps.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <Card>
@@ -332,6 +369,27 @@ export function GuestsSection({ event }: { event: EventDetail }) {
         </div>
       )}
 
+      {guests && guests.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-end gap-3">
+          <label className="min-w-44 flex-1 text-sm font-medium text-slate-700">
+            RSVP status
+            <select
+              value={rsvpFilter}
+              onChange={(e) => setRsvpFilter(e.target.value as RsvpFilter)}
+              className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+            >
+              <option value="ALL">Everyone</option>
+              <option value="CONFIRMED">Going (Yes)</option>
+              <option value="DECLINED">Declined (No)</option>
+              <option value="PENDING">Not responded</option>
+            </select>
+          </label>
+          <Button variant="secondary" onClick={exportCsv} disabled={visible.length === 0}>
+            ⬇ Export filtered CSV
+          </Button>
+        </div>
+      )}
+
       {guests && guests.length > 5 && (
         // Activity filtering is done by the chips above; this is a single, full-width search.
         <div className="mt-4">
@@ -358,7 +416,7 @@ export function GuestsSection({ event }: { event: EventDetail }) {
               </button>
             )}
           </div>
-          {(query || activityFilter) && (
+          {(query || activityFilter || rsvpFilter !== 'ALL') && (
             <p className="mt-2 text-xs text-slate-500" role="status">
               Showing {visible.length} of {guests.length} guests
             </p>
