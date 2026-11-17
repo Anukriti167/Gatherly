@@ -16,8 +16,7 @@ export interface Mailer {
 
 /**
  * Sends transactional email through GoDaddy Node.js Hosting's built-in
- * email gateway. The gateway chooses the canonical sender, so this class
- * deliberately does not set a `from` address.
+ * email gateway, using Gatherly's verified custom-domain sender address.
  */
 export class GoDaddyMailer implements Mailer {
   async send(message: MailMessage): Promise<void> {
@@ -26,6 +25,7 @@ export class GoDaddyMailer implements Mailer {
       subject: message.subject,
       text: message.text,
       html: message.html,
+      from: 'hello@letsgatherly.com',
       ...(message.replyTo ? { replyTo: message.replyTo } : {}),
     });
   }
