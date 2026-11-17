@@ -21,24 +21,48 @@ const server = app.listen(config.port, () => {
     return;
   }
 
+  // Verify SMTP connection and authentication without sending an email.
   if (mailer instanceof SmtpMailer) {
     void mailer.verify()
       .then(() => {
         logger.info('SMTP connection and authentication verified successfully');
       })
       .catch((err: unknown) => {
+        type SmtpError = Error & {
+          code?: string;
+          responseCode?: number;
+          command?: string;
+          response?: string;
+          errno?: string;
+          syscall?: string;
+          address?: string;
+          port?: number;
+        };
+
         const error = err instanceof Error
-          ? err as Error & {
-              code?: string;
-              responseCode?: number;
-              command?: string;
-              response?: string;
-              errno?: string;
-              syscall?: string;
-              address?: string;
-              port?: number;
-            }
+          ? err as SmtpError
           : undefined;
+
+        // AggregateError can contain multiple underlying socket errors.
+        const aggregate = err instanceof AggregateError
+          ? err
+          : undefined;
+
+        const underlyingErrors = aggregate?.errors.map((item: unknown) => {
+          const socketError = item instanceof Error
+            ? item as SmtpError
+            : undefined;
+
+          return {
+            name: socketError?.name ?? 'UnknownError',
+            message: socketError?.message ?? String(item),
+            code: socketError?.code,
+            errno: socketError?.errno,
+            syscall: socketError?.syscall,
+            address: socketError?.address,
+            port: socketError?.port,
+          };
+        }) ?? [];
 
         const details = {
           name: error?.name ?? 'UnknownError',
@@ -51,6 +75,7 @@ const server = app.listen(config.port, () => {
           syscall: error?.syscall,
           address: error?.address,
           port: error?.port,
+          underlyingErrors,
         };
 
         logger.error(
